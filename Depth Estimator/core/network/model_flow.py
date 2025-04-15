@@ -321,10 +321,6 @@ class Model_flow(nn.Module):
         img1, img2 = images[:,:,:img_h,:], images[:,:,img_h:,:]
         batch_size = img1.shape[0]
 
-        #cv2.imwrite('./test1.png', np.transpose(255*img1[0].cpu().detach().numpy(), [1,2,0]).astype(np.uint8))
-        #cv2.imwrite('./test2.png', np.transpose(255*img2[0].cpu().detach().numpy(), [1,2,0]).astype(np.uint8))
-        #pdb.set_trace()
-        # get the optical flows and reverse optical flows for each pair of adjacent images
         feature_list_1, feature_list_2 = self.fpyramid(img1), self.fpyramid(img2)
         optical_flows = self.pwc_model(feature_list_1, feature_list_2, [img_h, img_w])
         optical_flows_rev = self.pwc_model(feature_list_2, feature_list_1, [img_h, img_w])
@@ -367,8 +363,6 @@ class Model_flow(nn.Module):
         loss_pack['loss_flow_smooth'] = self.compute_loss_flow_smooth(optical_flows, img1_pyramid) + \
                            self.compute_loss_flow_smooth(optical_flows_rev, img2_pyramid)
         
-        #loss_pack['loss_flow_consis'] = self.compute_loss_flow_consis(fwd_flow_diff_pyramid, img1_valid_masks) + \
-        #                   self.compute_loss_flow_consis(bwd_flow_diff_pyramid, img2_valid_masks)
         loss_pack['loss_flow_consis'] = torch.zeros([2]).to(img1.get_device()).requires_grad_()
         if output_flow:
             return loss_pack, optical_flows[0], optical_flows_rev[0], img1_valid_masks[0], img2_valid_masks[0], fwd_flow_diff_pyramid[0], bwd_flow_diff_pyramid[0]
