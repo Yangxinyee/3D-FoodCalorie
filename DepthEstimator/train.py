@@ -148,7 +148,6 @@ def train(cfg):
 
 if __name__ == '__main__':
     import argparse
-    print("Starting argparse")
     arg_parser = argparse.ArgumentParser(
         description="TrianFlow training pipeline."
     )
@@ -186,7 +185,6 @@ if __name__ == '__main__':
         cfg = yaml.safe_load(f)
     cfg['img_hw'] = (cfg['img_hw'][0], cfg['img_hw'][1])
     cfg['log_dump_dir'] = os.path.join(args.model_dir, 'log.pkl')
-    print(f"Copying config file to model directory: {args.model_dir}")
     shutil.copy(args.config_file, args.model_dir)
 
     # copy attr into cfg
