@@ -4,7 +4,7 @@ from core.dataset import KITTI_2012, KITTI_2015
 from core.evaluation import eval_flow_avg, load_gt_flow_kitti
 from core.evaluation import eval_depth
 from core.visualize import Visualizer_debug
-from core.networks import Model_depth_pose, Model_flow, Model_flowposenet
+from core.networks import Model_flow #, Model_depth_pose, Model_flowposenet
 from core.evaluation import load_gt_flow_kitti, load_gt_mask
 import torch
 from tqdm import tqdm
@@ -232,13 +232,13 @@ if __name__ == '__main__':
 
     if args.mode == 'flow':
         model = Model_flow(cfg_new)
-    elif args.mode == 'depth' or args.mode == 'flow_3stage':
-        model = Model_depth_pose(cfg_new)
-    elif args.mode == 'flowposenet':
-        model = Model_flowposenet(cfg_new)
+    # elif args.mode == 'depth' or args.mode == 'flow_3stage':
+    #     model = Model_depth_pose(cfg_new)
+    # elif args.mode == 'flowposenet':
+    #     model = Model_flowposenet(cfg_new)
     
-    if args.task == 'demo':
-        model = Model_depth_pose(cfg_new)
+    # if args.task == 'demo':
+    #     model = Model_depth_pose(cfg_new)
 
     model.cuda()
     weights = torch.load(args.pretrained_model)
