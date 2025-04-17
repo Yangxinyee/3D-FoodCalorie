@@ -14,6 +14,7 @@ import PIL.Image as pil
 import os
 import numpy as np
 from collections import Counter
+from tqdm import tqdm
 
 
 def load_velodyne_points(filename):
@@ -125,7 +126,7 @@ def export_gt_depths_kitti():
     print("Exporting ground truth depths for eigen")
 
     gt_depths = []
-    for line in lines:
+    for line in tqdm(lines):
 
         folder, frame_id, _ = line.split()
         frame_id = int(frame_id)
