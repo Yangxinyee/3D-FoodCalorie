@@ -28,6 +28,10 @@ def load_model(model_dir, filename, model, optimizer):
 def train(cfg):
     # load model and optimizer
     model = get_model(cfg.mode)(cfg)
+    print(f"CUDA available: {torch.cuda.is_available()}")
+    print(f"GPU count: {torch.cuda.device_count()}")
+    print(f"Current device: {torch.cuda.current_device()}")
+    
     if cfg.multi_gpu:
         model = torch.nn.DataParallel(model)
     model = model.cuda()
