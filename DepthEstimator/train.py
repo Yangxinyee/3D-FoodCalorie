@@ -148,6 +148,7 @@ def train(cfg):
 
 if __name__ == '__main__':
     import argparse
+    print()
     arg_parser = argparse.ArgumentParser(
         description="TrianFlow training pipeline."
     )
