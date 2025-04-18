@@ -11,12 +11,17 @@
 #SBATCH --mail-user=haodong_zhang@brown.edu
 
 # Load required modules
-module load miniconda3/23.11.0
+module load miniconda3/23.11.0s
 
 # Activate conda environment
 source /oscar/runtime/software/external/miniconda3/23.11.0/etc/profile.d/conda.sh
 
-conda activate foodestimator
+conda activate food37
+module load cuda/11.8.0-lpttyok
+
+# uncomment it if using python3.6
+# module load cuda/10.2.89-xnfjmrt
+# conda activate foodestimator
 
 nvidia-smi
 
@@ -32,8 +37,8 @@ python train.py \
   --mode flow \
   --prepared_save_dir KITTI_prepared \
   --model_dir /users/hzhan351/scratch/checkpoints/flow_checkpoints \
-  --batch_size 16 \
-  --num_workers 6 \
+  --batch_size 8 \
+  --num_workers 4 \
   --no_test \
   --lr 0.0001
 
