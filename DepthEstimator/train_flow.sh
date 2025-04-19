@@ -37,7 +37,7 @@ python train.py \
   --mode flow \
   --prepared_save_dir KITTI_prepared \
   --model_dir /users/hzhan351/scratch/checkpoints/flow_checkpoints \
-  --batch_size 8 \
+  --batch_size 16 \
   --num_workers 4 \
   --no_test \
   --lr 0.0001
