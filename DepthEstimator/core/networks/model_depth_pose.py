@@ -5,7 +5,7 @@ from structures import *
 from model_triangulate_pose import Model_triangulate_pose
 from pytorch_ssim import SSIM
 sys.path.append(os.path.join(os.path.dirname(os.path.abspath(__file__)), '..', 'visualize'))
-from visualize import *
+from core.visualize import *
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
