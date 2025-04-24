@@ -1,7 +1,7 @@
+from __future__ import absolute_import, division, print_function
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
-from __future__ import absolute_import, division, print_function
 from collections import OrderedDict
 from timm.models.layers import trunc_normal_
 
