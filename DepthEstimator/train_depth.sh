@@ -34,9 +34,10 @@ python -c "import torch; print('PyTorch version:', torch.__version__); print('CU
 python train.py \
   --config_file /users/hzhan351/projects/3D-FoodCalorie/DepthEstimator/config/kitti.yaml \
   --gpu 0 \
-  --mode flow \
+  --mode depth \
   --prepared_save_dir KITTI_prepared \
   --model_dir /users/hzhan351/scratch/checkpoints \
+  --flow_pretrained_model /users/hzhan351/scratch/checkpoints/flow/last.pth \
   --batch_size 16 \
   --num_workers 4 \
   --no_test \
