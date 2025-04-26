@@ -31,16 +31,12 @@ cd /users/hzhan351/projects/3D-FoodCalorie/DepthEstimator
 python -c "import torch; print('PyTorch version:', torch.__version__); print('CUDA available:', torch.cuda.is_available()); print('CUDA version:', torch.version.cuda if torch.cuda.is_available() else 'NA'); print('GPU count:', torch.cuda.device_count()); print('GPU name:', torch.cuda.get_device_name(0) if torch.cuda.device_count() > 0 else 'NA')"
 
 # Run the training script
-python train.py \
+python test.py \
   --config_file /users/hzhan351/projects/3D-FoodCalorie/DepthEstimator/config/kitti.yaml \
   --gpu 0 \
   --mode depth \
-  --prepared_save_dir KITTI_prepared \
-  --model_dir /users/hzhan351/scratch/checkpoints/KITTI \
-  --flow_pretrained_model /users/hzhan351/scratch/checkpoints/KITTI/flow/last.pth \
-  --batch_size 8 \
-  --num_workers 4 \
-  --no_test \
-  --lr 0.0001
+  --task kitti_depth\
+  --pretrained_model /users/hzhan351/scratch/checkpoints/KITTI/depth/last.pth \
+  --result_dir /users/hzhan351/scratch/results
 
-echo "Training complete!"
+echo "Testing complete!"

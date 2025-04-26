@@ -36,7 +36,7 @@ python test.py \
   --gpu 0 \
   --mode flow \
   --task kitti_flow \
-  --pretrained_model /users/hzhan351/scratch/checkpoints/flow_checkpoints/flow/last.pth \
+  --pretrained_model /users/hzhan351/scratch/checkpoints/KITTI/flow/last.pth \
   --result_dir /users/hzhan351/scratch/results
 
 echo "Testing complete!"

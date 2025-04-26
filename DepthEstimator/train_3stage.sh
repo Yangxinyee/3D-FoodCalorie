@@ -32,12 +32,12 @@ python -c "import torch; print('PyTorch version:', torch.__version__); print('CU
 
 # Run the training script
 python train.py \
-  --config_file /users/hzhan351/projects/3D-FoodCalorie/DepthEstimator/config/kitti.yaml \
+  --config_file /users/hzhan351/projects/3D-FoodCalorie/DepthEstimator/config/kitti_3stage.yaml \
   --gpu 0 \
-  --mode depth \
+  --mode depth_pose \
   --prepared_save_dir KITTI_prepared \
   --model_dir /users/hzhan351/scratch/checkpoints/KITTI \
-  --flow_pretrained_model /users/hzhan351/scratch/checkpoints/KITTI/flow/last.pth \
+  --depth_pretrained_model /users/hzhan351/scratch/checkpoints/KITTI/depth/last.pth \
   --batch_size 8 \
   --num_workers 4 \
   --no_test \

@@ -36,7 +36,7 @@ python train.py \
   --gpu 0 \
   --mode flow \
   --prepared_save_dir KITTI_prepared \
-  --model_dir /users/hzhan351/scratch/checkpoints \
+  --model_dir /users/hzhan351/scratch/checkpoints/KITTI \
   --batch_size 16 \
   --num_workers 4 \
   --no_test \
