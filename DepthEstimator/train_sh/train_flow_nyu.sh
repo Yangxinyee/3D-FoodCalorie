@@ -1,6 +1,6 @@
 #!/bin/bash
 #SBATCH -J flownet_train           # Job name
-#SBATCH --time=48:00:00
+#SBATCH --time=72:00:00
 #SBATCH --nodes=1
 #SBATCH --ntasks-per-node=1
 #SBATCH -p gpu --gres=gpu:1 --constraint=geforce3090
@@ -31,12 +31,15 @@ cd /users/hzhan351/projects/3D-FoodCalorie/DepthEstimator
 python -c "import torch; print('PyTorch version:', torch.__version__); print('CUDA available:', torch.cuda.is_available()); print('CUDA version:', torch.version.cuda if torch.cuda.is_available() else 'NA'); print('GPU count:', torch.cuda.device_count()); print('GPU name:', torch.cuda.get_device_name(0) if torch.cuda.device_count() > 0 else 'NA')"
 
 # Run the training script
-python test.py \
-  --config_file /users/hzhan351/projects/3D-FoodCalorie/DepthEstimator/config/kitti.yaml \
+python train.py \
+  --config_file /users/hzhan351/projects/3D-FoodCalorie/DepthEstimator/config/nyu.yaml \
   --gpu 0 \
-  --mode depth \
-  --task kitti_depth\
-  --pretrained_model /users/hzhan351/scratch/checkpoints/KITTI/depth/last.pth \
-  --result_dir /users/hzhan351/scratch/results
+  --mode flow \
+  --prepared_save_dir nyuv2_prepared \
+  --model_dir /users/hzhan351/scratch/checkpoints/NYUV2 \
+  --batch_size 8 \
+  --num_workers 4 \
+  --no_test \
+  --lr 0.0001
 
-echo "Testing complete!"
+echo "Training complete!"

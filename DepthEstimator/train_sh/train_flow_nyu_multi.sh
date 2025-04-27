@@ -1,11 +1,11 @@
 #!/bin/bash
 #SBATCH -J flownet_train           # Job name
-#SBATCH --time=48:00:00
+#SBATCH --time=60:00:00
 #SBATCH --nodes=1
 #SBATCH --ntasks-per-node=1
-#SBATCH -p gpu --gres=gpu:1 --constraint=geforce3090
+#SBATCH -p gpu --gres=gpu:2 --constraint=geforce3090  
 #SBATCH --mem=32G
-#SBATCH --cpus-per-task=4
+#SBATCH --cpus-per-task=8          
 #SBATCH -o slurm-out/slurm-%j.out
 #SBATCH --mail-type=ALL
 #SBATCH --mail-user=haodong_zhang@brown.edu
@@ -33,13 +33,14 @@ python -c "import torch; print('PyTorch version:', torch.__version__); print('CU
 # Run the training script
 python train.py \
   --config_file /users/hzhan351/projects/3D-FoodCalorie/DepthEstimator/config/nyu.yaml \
-  --gpu 0 \
+  --gpu 0,1 \                      
+  --multi_gpu \                    
   --mode flow \
   --prepared_save_dir nyuv2_prepared \
   --model_dir /users/hzhan351/scratch/checkpoints/NYUV2 \
-  --batch_size 16 \
-  --num_workers 4 \
+  --batch_size 16 \               
+  --num_workers 8 \                
   --no_test \
-  --lr 0.0001
+  --lr 0.0002                      
 
 echo "Training complete!"
