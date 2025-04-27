@@ -1,12 +1,12 @@
 cfg_name: 'default'
 
 # dataset
-raw_base_dir: '/users/hzhan351/scratch/KITTI_RawData'
-prepared_base_dir: '/users/hzhan351/scratch'
-gt_2012_dir: '/users/hzhan351/scratch/KITTI_2012/training'
-gt_2015_dir: '/users/hzhan351/scratch/KITTI_2015/training'
-static_frames_txt: '/users/hzhan351/projects/3D-FoodCalorie/DepthEstimator/data/eigen/static_frames.txt'
-test_scenes_txt: '/users/hzhan351/projects/3D-FoodCalorie/DepthEstimator/data/eigen/test_scenes.txt'
+raw_base_dir: '/home/dataset/hKITTI_RawData'
+prepared_base_dir: '/home/dataset'
+gt_2012_dir: '/home/dataset/KITTI_2012/training'
+gt_2015_dir: '/home/dataset/KITTI_2015/training'
+static_frames_txt: '/home/3D-FoodCalorie/DepthEstimator/data/eigen/static_frames.txt'
+test_scenes_txt: '/home/3D-FoodCalorie/DepthEstimator/data/eigen/test_scenes.txt'
 dataset: 'kitti_depth'
 num_scales: 3
 
