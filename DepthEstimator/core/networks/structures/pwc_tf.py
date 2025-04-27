@@ -98,7 +98,8 @@ class PWC_tf(nn.Module):
         x3 = self.conv6_3(torch.cat((x1,x2),1))
         x4 = self.conv6_4(torch.cat((x2,x3),1))
         flow6 = self.predict_flow6(torch.cat((x3,x4),1))
-        up_flow6 = F.interpolate(flow6, scale_factor=2.0, mode='bilinear')*2.0
+        # up_flow6 = F.interpolate(flow6, scale_factor=2.0, mode='bilinear')*2.0
+        up_flow6 = F.interpolate(flow6, size=(c15.shape[2], c15.shape[3]), mode='bilinear', align_corners=False)*2.0
 
         warp5 = self.warp(c25, up_flow6)
         corr5 = self.corr(c15, warp5) 
@@ -110,7 +111,8 @@ class PWC_tf(nn.Module):
         x4 = self.conv5_4(torch.cat((x2,x3),1))
         flow5 = self.predict_flow5(torch.cat((x3,x4),1))
         flow5 = flow5 + up_flow6
-        up_flow5 = F.interpolate(flow5, scale_factor=2.0, mode='bilinear')*2.0
+        # up_flow5 = F.interpolate(flow5, scale_factor=2.0, mode='bilinear')*2.0
+        up_flow5 = F.interpolate(flow5, size=(c14.shape[2], c14.shape[3]), mode='bilinear', align_corners=False)*2.0
 
        
         warp4 = self.warp(c24, up_flow5)
@@ -123,7 +125,8 @@ class PWC_tf(nn.Module):
         x4 = self.conv4_4(torch.cat((x2,x3),1))
         flow4 = self.predict_flow4(torch.cat((x3,x4),1))
         flow4 = flow4 + up_flow5
-        up_flow4 = F.interpolate(flow4, scale_factor=2.0, mode='bilinear')*2.0
+        # up_flow4 = F.interpolate(flow4, scale_factor=2.0, mode='bilinear')*2.0
+        up_flow4 = F.interpolate(flow4, size=(c13.shape[2], c13.shape[3]), mode='bilinear', align_corners=False)*2.0
 
         warp3 = self.warp(c23, up_flow4)
         corr3 = self.corr(c13, warp3) 
@@ -135,7 +138,8 @@ class PWC_tf(nn.Module):
         x4 = self.conv3_4(torch.cat((x2,x3),1))
         flow3 = self.predict_flow3(torch.cat((x3,x4),1))
         flow3 = flow3 + up_flow4
-        up_flow3 = F.interpolate(flow3, scale_factor=2.0, mode='bilinear')*2.0
+        # up_flow3 = F.interpolate(flow3, scale_factor=2.0, mode='bilinear')*2.0
+        up_flow3 = F.interpolate(flow3, size=(c12.shape[2], c12.shape[3]), mode='bilinear', align_corners=False)*2.0
 
 
         warp2 = self.warp(c22, up_flow3) 
@@ -148,7 +152,7 @@ class PWC_tf(nn.Module):
         x4 = self.conv2_4(torch.cat((x2,x3),1))
         flow2 = self.predict_flow2(torch.cat((x3,x4),1))
         flow2 = flow2 + up_flow3
- 
+        
         x = self.dc_conv4(self.dc_conv3(self.dc_conv2(self.dc_conv1(torch.cat([flow2, x4], 1)))))
         flow2 = flow2 + self.dc_conv7(self.dc_conv6(self.dc_conv5(x)))
 
