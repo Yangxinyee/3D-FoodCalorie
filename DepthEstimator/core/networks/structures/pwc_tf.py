@@ -152,7 +152,7 @@ class PWC_tf(nn.Module):
         x4 = self.conv2_4(torch.cat((x2,x3),1))
         flow2 = self.predict_flow2(torch.cat((x3,x4),1))
         flow2 = flow2 + up_flow3
-        
+
         x = self.dc_conv4(self.dc_conv3(self.dc_conv2(self.dc_conv1(torch.cat([flow2, x4], 1)))))
         flow2 = flow2 + self.dc_conv7(self.dc_conv6(self.dc_conv5(x)))
 

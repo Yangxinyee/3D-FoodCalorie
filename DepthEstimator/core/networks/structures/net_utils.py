@@ -24,10 +24,10 @@ def warp_flow(x, flow, use_mask=False):
     """
     B, C, H, W = x.size()
 
-    if flow.shape[2] != H or flow.shape[3] != W:
-        flow = torch.nn.functional.interpolate(flow, size=(H, W), mode='bilinear', align_corners=False)
-        flow[:, 0, :, :] *= float(W) / float(flow.shape[3])
-        flow[:, 1, :, :] *= float(H) / float(flow.shape[2])
+    # if flow.shape[2] != H or flow.shape[3] != W:
+    #     flow = torch.nn.functional.interpolate(flow, size=(H, W), mode='bilinear', align_corners=False)
+    #     flow[:, 0, :, :] *= float(W) / float(flow.shape[3])
+    #     flow[:, 1, :, :] *= float(H) / float(flow.shape[2])
 
     # mesh grid 
     xx = torch.arange(0, W).view(1,-1).repeat(H,1)
