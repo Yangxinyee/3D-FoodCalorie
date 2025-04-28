@@ -1,7 +1,7 @@
 cfg_name: 'default'
 
 # dataset
-raw_base_dir: '/home/dataset/hKITTI_RawData'
+raw_base_dir: '/home/dataset/KITTI_RawData'
 prepared_base_dir: '/home/dataset'
 gt_2012_dir: '/home/dataset/KITTI_2012/training'
 gt_2015_dir: '/home/dataset/KITTI_2015/training'
