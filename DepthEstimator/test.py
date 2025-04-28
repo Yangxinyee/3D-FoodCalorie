@@ -240,9 +240,23 @@ if __name__ == '__main__':
     if args.task == 'demo':
         model = Model_depth_pose(cfg_new)
 
+    # model.cuda()
+    # weights = torch.load(args.pretrained_model)
+    # model.load_state_dict(weights['model_state_dict'])
+    # model.eval()
+    # print('Model Loaded.')
     model.cuda()
     weights = torch.load(args.pretrained_model)
-    model.load_state_dict(weights['model_state_dict'])
+    # Automatically remove 'module.' prefix if exists
+    new_state_dict = {}
+    for k, v in weights['model_state_dict'].items():
+        if k.startswith('module.'):
+            new_key = k[7:]  # remove 'module.' prefix
+        else:
+            new_key = k
+        new_state_dict[new_key] = v
+
+    model.load_state_dict(new_state_dict)
     model.eval()
     print('Model Loaded.')
 
