@@ -134,6 +134,7 @@ def train(cfg):
         optimizer.zero_grad()
         inputs = [k.cuda() for k in inputs]
         output = model(inputs)
+        print(output)
         if isinstance(output, (list, tuple)):
             output = output[0]
         loss_pack = output['loss_pack']
