@@ -579,5 +579,5 @@ class Model_depth_pose(nn.Module):
             loss_pack['pt_depth_loss'] = pt_depth_loss
             loss_pack['pj_depth_loss'], loss_pack['flow_error'] = pj_depth_loss, flow_error
             loss_pack['depth_smooth_loss'] = depth_smooth_loss
-        return loss_pack, (flag1, flag2, flag3)
+        return {'loss_pack': loss_pack, 'flags': (flag1, flag2, flag3)}
 

@@ -133,7 +133,9 @@ def train(cfg):
         iter_ = iter_ + cfg.iter_start
         optimizer.zero_grad()
         inputs = [k.cuda() for k in inputs]
-        loss_pack, (flag1, flag2, flag3) = model(inputs)
+        output = model(inputs)
+        loss_pack = output['loss_pack']
+        (flag1, flag2, flag3) = output['flags']
         if iter_ % cfg.log_interval == 0:
             visualizer.print_loss(loss_pack, iter_=iter_)
 
