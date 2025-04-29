@@ -87,6 +87,7 @@ class DepthDecoder(nn.Module):
         device = input_features[-1].device
         x = input_features[-1]
         for i in range(2, -1, -1):
+            x = x.to(self.convs[("upconv", i, 0)].conv.weight.device)
             x = self.convs[("upconv", i, 0)](x)
             x = [upsample(x).to(device)]
 
