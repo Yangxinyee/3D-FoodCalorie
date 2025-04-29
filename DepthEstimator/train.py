@@ -108,7 +108,7 @@ def train(cfg):
     log_file_path = os.path.join(cfg.model_dir, "train_log.txt")
     if not os.path.exists(log_file_path):
         with open(log_file_path, "w") as f:
-            f.write("iter, loss_pixel, loss_ssim, loss_pt_depth, loss_pj_depth, loss_depth_smooth, total_loss\n")
+            f.write("iter, loss_pixel, loss_ssim, loss_pt_depth, loss_pj_depth, loss_depth_smooth, total_loss, flag1, flag2, flag3\n")
 
     # training
     print('starting iteration: {}.'.format(cfg.iter_start))
@@ -133,7 +133,7 @@ def train(cfg):
         iter_ = iter_ + cfg.iter_start
         optimizer.zero_grad()
         inputs = [k.cuda() for k in inputs]
-        loss_pack = model(inputs)
+        loss_pack, (flag1, flag2, flag3) = model(inputs)
         if iter_ % cfg.log_interval == 0:
             visualizer.print_loss(loss_pack, iter_=iter_)
 
@@ -149,7 +149,7 @@ def train(cfg):
             loss_depth_smooth = loss_pack.get('depth_smooth_loss', torch.tensor(0.0)).mean().item()
 
             with open(log_file_path, "a") as f:
-                f.write(f"{iter_},{loss_pixel:.6f},{loss_ssim:.6f},{loss_pt_depth:.6f},{loss_pj_depth:.6f},{loss_depth_smooth:.6f},{loss.item():.6f}\n")
+                f.write(f"{iter_},{loss_pixel:.6f},{loss_ssim:.6f},{loss_pt_depth:.6f},{loss_pj_depth:.6f},{loss_depth_smooth:.6f},{loss.item():.6f},{flag1},{flag2},{flag3}\n")
 
         loss_list = []
         for key in list(loss_pack.keys()):
@@ -177,7 +177,7 @@ if __name__ == '__main__':
     arg_parser.add_argument('--iter_start', type=int, default=0, help='starting iteration.')
     arg_parser.add_argument('--lr', type=float, default=0.0001, help='learning rate')
     arg_parser.add_argument('--num_workers', type=int, default=4, help='number of workers.')
-    arg_parser.add_argument('--log_interval', type=int, default=100, help='interval for printing loss.')
+    arg_parser.add_argument('--log_interval', type=int, default=1, help='interval for printing loss.')
     arg_parser.add_argument('--test_interval', type=int, default=2000, help='interval for evaluation.')
     arg_parser.add_argument('--save_interval', type=int, default=2000, help='interval for saving models.')
     arg_parser.add_argument('--mode', type=str, default='flow', help='training mode.')
