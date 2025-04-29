@@ -53,7 +53,7 @@ def train(cfg):
         else:
             cfg.iter_start, model, optimizer = load_model(cfg.model_dir, 'last.pth', model, optimizer)
             cfg.iter_start = 0
-    if cfg.flow_pretrained_model:
+    elif cfg.flow_pretrained_model:
         data = torch.load(cfg.flow_pretrained_model)['model_state_dict']
         renamed_dict = OrderedDict()
         for k, v in data.items():
