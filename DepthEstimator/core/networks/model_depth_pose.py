@@ -488,6 +488,9 @@ class Model_depth_pose(nn.Module):
         K_inv_ms = K_inv_ms.to(images.device)
 
         K, K_inv = K_ms[:,0,:,:], K_inv_ms[:,0,:,:]
+        
+        K = K.contiguous()
+        K_inv = K_inv.contiguous()
         assert (images.shape[1] == 3)
         img_h, img_w = int(images.shape[2] / 2), images.shape[3] 
         img1, img2 = images[:,:,:img_h,:].to(images.device), images[:,:,img_h:,:].to(images.device)
