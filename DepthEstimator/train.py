@@ -53,14 +53,19 @@ def train(cfg):
         else:
             cfg.iter_start, model, optimizer = load_model(cfg.model_dir, 'last.pth', model, optimizer)
             cfg.iter_start = 0
-    elif cfg.flow_pretrained_model:
+    if cfg.flow_pretrained_model:
         data = torch.load(cfg.flow_pretrained_model)['model_state_dict']
         renamed_dict = OrderedDict()
         for k, v in data.items():
+            if k.startswith('module.'):
+                new_key = k[7:]
+            else:
+                new_key = k
+            renamed_dict[new_key] = v
+
+        for k, v in renamed_dict.items():
             if cfg.multi_gpu:
-                name = 'module.model_flow.' + k
-            elif cfg.mode == 'flowposenet':
-                name = 'model_flow.' + k
+                name = 'module.model_pose.model_flow.' + k
             else:
                 name = 'model_pose.model_flow.' + k
             renamed_dict[name] = v
