@@ -148,7 +148,7 @@ def train(cfg):
             loss_pj_depth = loss_pack.get('pj_depth_loss', torch.tensor(0.0)).mean().item()
             loss_depth_smooth = loss_pack.get('depth_smooth_loss', torch.tensor(0.0)).mean().item()
 
-            with open(log_file_path, "a") as f:
+            with open(log_file_path, "w") as f:
                 f.write(f"{iter_},{loss_pixel:.6f},{loss_ssim:.6f},{loss_pt_depth:.6f},{loss_pj_depth:.6f},{loss_depth_smooth:.6f},{loss.item():.6f},{flag1},{flag2},{flag3}\n")
 
         loss_list = []
