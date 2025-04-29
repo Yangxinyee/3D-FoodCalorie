@@ -23,18 +23,21 @@ class Model_depth_pose(nn.Module):
         self.depth_net = Depth_Model(cfg.depth_scale)
         self.model_pose = Model_triangulate_pose(cfg)
 
-    def meshgrid(self, h, w):
+    def meshgrid(self, h, w, device=None):
         xx, yy = np.meshgrid(np.arange(0,w), np.arange(0,h))
         meshgrid = np.transpose(np.stack([xx,yy], axis=-1), [2,0,1]) # [2,h,w]
         meshgrid = torch.from_numpy(meshgrid)
+        if device is not None:
+            meshgrid = meshgrid.to(device)
         return meshgrid
     
     def robust_rand_sample(self, match, mask, num):
         # match: [b, 4, -1] mask: [b, 1, -1]
+        device = match.device
         b, n = match.shape[0], match.shape[2]
         nonzeros_num = torch.min(torch.sum(mask > 0, dim=-1)) # []
         if nonzeros_num.detach().cpu().numpy() == n:
-            rand_int = torch.randint(0, n, [num])
+            rand_int = torch.randint(0, n, (num,), device=device)
             select_match = match[:,:,rand_int]
         else:
             # If there is zero score in match, sample the non-zero matches.
@@ -42,7 +45,7 @@ class Model_depth_pose(nn.Module):
             select_idxs = []
             for i in range(b):
                 nonzero_idx = torch.nonzero(mask[i,0,:]) # [nonzero_num,1]
-                rand_int = torch.randint(0, nonzero_idx.shape[0], [int(num)])
+                rand_int = torch.randint(0, nonzero_idx.shape[0], (int(num),), device=device)
                 select_idx = nonzero_idx[rand_int, :] # [num, 1]
                 select_idxs.append(select_idx)
             select_idxs = torch.stack(select_idxs, 0) # [b,num,1]
@@ -58,7 +61,8 @@ class Model_depth_pose(nn.Module):
     
     def rand_sample(self, match, num):
         b, c, n = match.shape[0], match.shape[1], match.shape[2]
-        rand_int = torch.randint(0, match.shape[-1], size=[num])
+        device = match.device
+        rand_int = torch.randint(0, match.shape[-1], size=(num,), device=device)
         select_pts = match[:,:,rand_int]
         return select_pts
     
@@ -70,15 +74,18 @@ class Model_depth_pose(nn.Module):
         select_idxs = []
         flag = 0
         for i in range(b):
+            device = mask.device
             if torch.sum(mask[i,:,0]) == n:
-                idx = torch.arange(n).to(mask.get_device())
+                # idx = torch.arange(n).to(mask.get_device())
+                idx =torch.arange(n, device=device)
             else:
                 nonzero_idx = torch.nonzero(mask[i,:,0]).squeeze(1) # [k]
                 if nonzero_idx.shape[0] < 0.1*n:
                     idx = torch.arange(n).to(mask.get_device())
                     flag = 1
                 else:
-                    res = torch.randint(0, nonzero_idx.shape[0], size=[n-nonzero_idx.shape[0]]).to(mask.get_device()) # [n-nz]
+                    # res = torch.randint(0, nonzero_idx.shape[0], size=[n-nonzero_idx.shape[0]]).to(mask.get_device()) # [n-nz]
+                    res = torch.randint(0, nonzero_idx.shape[0], (n-nonzero_idx.shape[0],), device=device) # [n-nz]
                     idx = torch.cat([nonzero_idx, nonzero_idx[res]], 0)
             select_idxs.append(idx)
         select_idxs = torch.stack(select_idxs, dim=0) # [b,n]
@@ -92,7 +99,8 @@ class Model_depth_pose(nn.Module):
         # Filter out the negative projection depth.
         # point2d_1_depth: [b, n, 1]
         b, n = point2d_1_coord.shape[0], point2d_1_coord.shape[1]
-        max_coord = torch.Tensor([max_w, max_h]).to(point2d_1_coord.get_device())
+        # max_coord = torch.Tensor([max_w, max_h]).to(point2d_1_coord.get_device())
+        max_coord = torch.tensor([max_w, max_h], device=point2d_1_coord.device)
         mask = (point2d_1_coord > 0).all(dim=-1, keepdim=True).float() * (point2d_2_coord > 0).all(dim=-1, keepdim=True).float() * \
             (point2d_1_coord < max_coord).all(dim=-1, keepdim=True).float() * (point2d_2_coord < max_coord).all(dim=-1, keepdim=True).float()
         
@@ -103,14 +111,17 @@ class Model_depth_pose(nn.Module):
         select_idxs = []
         for i in range(b):
             if torch.sum(mask[i,:,0]) == n:
-                idx = torch.arange(n).to(mask.get_device())
+                # idx = torch.arange(n).to(mask.get_device())
+                idx = torch.arange(n, device=mask.device)
             else:
                 nonzero_idx = torch.nonzero(mask[i,:,0]).squeeze(1) # [k]
                 if nonzero_idx.shape[0] < 0.1*n:
-                    idx = torch.arange(n).to(mask.get_device())
+                    # idx = torch.arange(n).to(mask.get_device())
+                    idx = torch.arange(n, device=mask.device)
                     flag = 1
                 else:
-                    res = torch.randint(0, nonzero_idx.shape[0], size=[n-nonzero_idx.shape[0]]).to(mask.get_device())
+                    # res = torch.randint(0, nonzero_idx.shape[0], size=[n-nonzero_idx.shape[0]]).to(mask.get_device())
+                    res = torch.randint(0, nonzero_idx.shape[0], (n-nonzero_idx.shape[0],), device=mask.device)
                     idx = torch.cat([nonzero_idx, nonzero_idx[res]], 0)
             select_idxs.append(idx)
         select_idxs = torch.stack(select_idxs, dim=0) # [b,n]
@@ -127,7 +138,8 @@ class Model_depth_pose(nn.Module):
         K_inv = torch.inverse(K)
         RT1 = K_inv.bmm(P1) # [b, 3, 4]
         RT2 = K_inv.bmm(P2)
-        ones = torch.ones([b,1,n]).to(match.get_device())
+        # ones = torch.ones([b,1,n]).to(match.get_device())
+        ones = torch.ones([b,1,n], device=match.device)
         pts1 = torch.cat([match[:,:2,:], ones], 1)
         pts2 = torch.cat([match[:,2:,:], ones], 1)
         
@@ -151,7 +163,8 @@ class Model_depth_pose(nn.Module):
             flag = 1
             filt_match = match[:,:,:100]
             if return_angle:
-                return filt_match, flag, torch.zeros_like(mask).to(filt_match.get_device())
+                # return filt_match, flag, torch.zeros_like(mask).to(filt_match.get_device())
+                return filt_match, flag, torch.zeros_like(mask, device=match.device)
             else:
                 return filt_match, flag
         nonzero_idx = []
@@ -171,7 +184,8 @@ class Model_depth_pose(nn.Module):
         b, n = match.shape[0], match.shape[2]
         RT1 = K_inv.bmm(P1) # [b, 3, 4]
         RT2 = K_inv.bmm(P2)
-        ones = torch.ones([b,1,n]).to(match.get_device())
+        # ones = torch.ones([b,1,n]).to(match.get_device())
+        ones = torch.ones((b, 1, n), device=match.device)
         pts1 = torch.cat([match[:,:2,:], ones], 1)
         pts2 = torch.cat([match[:,2:,:], ones], 1)
         
@@ -204,7 +218,8 @@ class Model_depth_pose(nn.Module):
         b = fmat.shape[0]
         fmat_ = K.transpose(1,2).bmm(fmat)
         essential_mat = fmat_.bmm(K)
-        iden = torch.cat([torch.eye(3), torch.zeros([3,1])], -1).unsqueeze(0).repeat(b,1,1).to(K.get_device()) # [b,3,4]
+        # iden = torch.cat([torch.eye(3), torch.zeros([3,1])], -1).unsqueeze(0).repeat(b,1,1).to(K.get_device()) # [b,3,4]
+        iden = torch.cat([torch.eye(3, device=K.device), torch.zeros((3,1), device=K.device)], dim=-1).unsqueeze(0).repeat(b,1,1)
         P1 = K.bmm(iden)
         flags = []
         number_inliers = []
@@ -212,7 +227,8 @@ class Model_depth_pose(nn.Module):
         for i in range(b):
             cnum, R, t, _ = cv2.recoverPose(essential_mat[i].cpu().detach().numpy().astype('float64'), verify_match[i,:,:2].astype('float64'), \
                 verify_match[i,:,2:].astype('float64'), cameraMatrix=K[i,:,:].cpu().detach().numpy().astype('float64'))
-            p2 = torch.from_numpy(np.concatenate([R, t], axis=-1)).float().to(K.get_device())
+            # p2 = torch.from_numpy(np.concatenate([R, t], axis=-1)).float().to(K.get_device())
+            p2 = torch.from_numpy(np.concatenate([R, t], axis=-1)).float().to(K.device)
             P2.append(p2)
             if cnum > depth_match.shape[-1] / 7.0:
                 flags.append(1)
@@ -245,8 +261,10 @@ class Model_depth_pose(nn.Module):
         essential_mat = fmat_.bmm(K)
         essential_mat_cpu = essential_mat.cpu()
         U, S, V = torch.svd(essential_mat_cpu)
-        U, S, V = U.to(K.get_device()), S.to(K.get_device()), V.to(K.get_device())
-        W = torch.from_numpy(np.array([[[0., -1., 0.],[1., 0., 0.],[0., 0., 1.]]])).float().repeat(b,1,1).to(K.get_device())
+        # U, S, V = U.to(K.get_device()), S.to(K.get_device()), V.to(K.get_device())
+        U, S, V = U.to(K.device), S.to(K.device), V.to(K.device)
+        # W = torch.from_numpy(np.array([[[0., -1., 0.],[1., 0., 0.],[0., 0., 1.]]])).float().repeat(b,1,1).to(K.get_device())
+        W = torch.tensor([[[0., -1., 0.],[1., 0., 0.],[0., 0., 1.]]], device=K.device).repeat(b,1,1)
         # R = UWV^t or UW^tV^t t = U[:,2] the third column of U
         R1 = U.bmm(W).bmm(V.transpose(1,2)) # Do we need matrix determinant sign?
         R1 = torch.sign(torch.det(R1)).unsqueeze(-1).unsqueeze(-1) * R1
@@ -255,7 +273,8 @@ class Model_depth_pose(nn.Module):
         t1 = U[:,:,2].unsqueeze(-1) # The third column
         t2 = -U[:,:,2].unsqueeze(-1) # Inverse direction
         
-        iden = torch.cat([torch.eye(3), torch.zeros([3,1])], -1).unsqueeze(0).repeat(b,1,1).to(K.get_device()) # [b,3,4]
+        # iden = torch.cat([torch.eye(3), torch.zeros([3,1])], -1).unsqueeze(0).repeat(b,1,1).to(K.get_device()) # [b,3,4]
+        iden = torch.cat([torch.eye(3, device=K.device), torch.zeros((3,1), device=K.device)], dim=-1).unsqueeze(0).repeat(b,1,1) # [b,3,4]
         P1 = K.bmm(iden)
         P2_1 = K.bmm(torch.cat([R1, t1], -1))
         P2_2 = K.bmm(torch.cat([R2, t1], -1))
@@ -333,16 +352,18 @@ class Model_depth_pose(nn.Module):
         loss = torch.pow(1.0 - pred_tri_depth / (tri_depth + 1e-12), 2).mean((1,2))
         return loss
     
-    def get_reproj_fdp_loss(self, pred1, pred2, P2, K, K_inv, valid_mask, rigid_mask, flow, visualizer=None):
+    def get_reproj_fdp_loss(self, pred1, pred2, P2, K, K_inv, valid_mask, rigid_mask, flow):
         # pred: [b,1,h,w] Rt: [b,3,4] K: [b,3,3] mask: [b,1,h,w] flow: [b,2,h,w]
         b, h, w = pred1.shape[0], pred1.shape[2], pred1.shape[3]
-        xy = self.meshgrid(h,w).unsqueeze(0).repeat(b,1,1,1).float().to(flow.get_device()) # [b,2,h,w]
-        ones = torch.ones([b,1,h,w]).float().to(flow.get_device())
+        # xy = self.meshgrid(h,w).unsqueeze(0).repeat(b,1,1,1).float().to(flow.get_device()) # [b,2,h,w]
+        xy = self.meshgrid(h, w, device=flow.device).unsqueeze(0).repeat(b, 1, 1, 1).float()
+        #ones = torch.ones([b,1,h,w]).float().to(flow.get_device())
+        ones = torch.ones((b, 1, h, w), device=flow.device)
         pts1_3d = K_inv.bmm(torch.cat([xy, ones], 1).view([b,3,-1])) * pred1.view([b,1,-1]) # [b,3,h*w]
         pts2_coord, pts2_depth = self.reproject(P2, torch.cat([pts1_3d, ones.view([b,1,-1])], 1).transpose(1,2)) # [b,h*w, 2]
         # TODO Here some of the reprojection coordinates are invalid. (<0 or >max)
-        reproj_valid_mask = (pts2_coord > torch.Tensor([0,0]).to(pred1.get_device())).all(-1, True).float() * \
-            (pts2_coord < torch.Tensor([w-1,h-1]).to(pred1.get_device())).all(-1, True).float() # [b,h*w, 1]
+        reproj_valid_mask = (pts2_coord > torch.Tensor([0,0], device=pred1.device)).all(-1, True).float() * \
+            (pts2_coord < torch.Tensor([w-1,h-1], device=pred1.device)).all(-1, True).float() # [b,h*w, 1]
         reproj_valid_mask = (valid_mask * reproj_valid_mask.view([b,h,w,1]).permute([0,3,1,2])).detach()
         rigid_mask = rigid_mask.detach()
         pts2_depth = pts2_depth.transpose(1,2).view([b,1,h,w])
@@ -419,8 +440,8 @@ class Model_depth_pose(nn.Module):
         P1, P2, flags = self.rt_from_fundamental_mat_nyu(F_final.detach(), K, depth_match)
         P1 = P1.detach()
         P2 = P2.detach()
-        flags = torch.from_numpy(np.stack(flags, axis=0)).float().to(K.get_device())
-
+        # flags = torch.from_numpy(np.stack(flags, axis=0)).float().to(K.get_device())
+        flags = torch.tensor(np.stack(flags, axis=0), device=K.device)
         return flags
 
     def inference(self, img1, img2, K, K_inv):
@@ -463,10 +484,14 @@ class Model_depth_pose(nn.Module):
     def forward(self, inputs):
         # initialization
         images, K_ms, K_inv_ms = inputs
+        K_ms = K_ms.to(images.device)
+        K_inv_ms = K_inv_ms.to(images.device)
+
         K, K_inv = K_ms[:,0,:,:], K_inv_ms[:,0,:,:]
         assert (images.shape[1] == 3)
         img_h, img_w = int(images.shape[2] / 2), images.shape[3] 
-        img1, img2 = images[:,:,:img_h,:], images[:,:,img_h:,:]
+        img1, img2 = images[:,:,:img_h,:].to(images.device), images[:,:,img_h:,:].to(images.device)
+
         b = img1.shape[0]
         flag1, flag2, flag3 = 0, 0, 0
         visualizer = Visualizer_debug('./vis/', img1=255*img1.permute([0,2,3,1]).detach().cpu().numpy(), \
@@ -487,7 +512,8 @@ class Model_depth_pose(nn.Module):
         
         if self.dataset == 'nyuv2':
             P1, P2, flags = self.rt_from_fundamental_mat_nyu(F_final.detach(), K, depth_match)
-            flags = torch.from_numpy(np.stack(flags, axis=0)).float().to(K.get_device())
+            # flags = torch.from_numpy(np.stack(flags, axis=0)).float().to(K.get_device())
+            flags = torch.from_numpy(np.stack(flags, axis=0)).float().to(K.device)
         else:
             P1, P2 = self.rt_from_fundamental_mat(F_final.detach(), K, depth_match)
         P1 = P1.detach()
@@ -508,16 +534,25 @@ class Model_depth_pose(nn.Module):
 
         
         if flag1 + flag2 + flag3 > 0:
-            loss_pack['pt_depth_loss'] = torch.zeros([2]).to(point3d_1.get_device()).requires_grad_()
-            loss_pack['pj_depth_loss'] = torch.zeros([2]).to(point3d_1.get_device()).requires_grad_()
-            loss_pack['flow_error'] = torch.zeros([2]).to(point3d_1.get_device()).requires_grad_()
-            loss_pack['depth_smooth_loss'] = torch.zeros([2]).to(point3d_1.get_device()).requires_grad_()
+            # loss_pack['pt_depth_loss'] = torch.zeros([2]).to(point3d_1.get_device()).requires_grad_()
+            loss_pack['pt_depth_loss'] = torch.zeros([2], device=point3d_1.device).requires_grad_()
+            # loss_pack['pj_depth_loss'] = torch.zeros([2]).to(point3d_1.get_device()).requires_grad_()
+            loss_pack['pj_depth_loss'] = torch.zeros([2], device=point3d_1.device).requires_grad_()
+            # loss_pack['flow_error'] = torch.zeros([2]).to(point3d_1.get_device()).requires_grad_()
+            loss_pack['flow_error'] = torch.zeros([2], device=point3d_1.device).requires_grad_()
+            # loss_pack['depth_smooth_loss'] = torch.zeros([2]).to(point3d_1.get_device()).requires_grad_()
+            loss_pack['depth_smooth_loss'] = torch.zeros([2], device=point3d_1.device).requires_grad_()
             return loss_pack
 
-        pt_depth_loss = 0
-        pj_depth_loss = 0
-        flow_error = 0
-        depth_smooth_loss = 0
+        # pt_depth_loss = 0
+        # pj_depth_loss = 0
+        # flow_error = 0
+        # depth_smooth_loss = 0
+        pt_depth_loss = torch.tensor(0., device=point3d_1.device)
+        pj_depth_loss = torch.tensor(0., device=point3d_1.device)
+        flow_error = torch.tensor(0., device=point3d_1.device)
+        depth_smooth_loss = torch.tensor(0., device=point3d_1.device)
+
         for s in range(self.depth_scale):
             disp_pred1 = F.interpolate(disp1_list[s], size=(img_h, img_w), mode='bilinear') # [b,1,h,w]
             disp_pred2 = F.interpolate(disp2_list[s], size=(img_h, img_w), mode='bilinear')
@@ -530,7 +565,7 @@ class Model_depth_pose(nn.Module):
             # Get Losses
             
             pt_depth_loss += self.get_trian_loss(point2d_1_depth, inter_pred1) + self.get_trian_loss(point2d_2_depth, inter_pred2)
-            pj_depth, flow_loss = self.get_reproj_fdp_loss(rescaled_pred1, rescaled_pred2, P2, K, K_inv, img1_valid_mask, img1_rigid_mask, fwd_flow, visualizer=visualizer)
+            pj_depth, flow_loss = self.get_reproj_fdp_loss(rescaled_pred1, rescaled_pred2, P2, K, K_inv, img1_valid_mask, img1_rigid_mask, fwd_flow)
             depth_smooth_loss += self.get_smooth_loss(img1, disp_pred1 / (disp_pred1.mean((2,3), True) + 1e-12)) + \
                 self.get_smooth_loss(img2, disp_pred2 / (disp_pred2.mean((2,3), True) + 1e-12))
             pj_depth_loss += pj_depth

@@ -14,8 +14,11 @@ class reduced_ransac(nn.Module):
         # match: [b, 4, -1] mask: [b, 1, -1]
         b, n = match.shape[0], match.shape[2]
         nonzeros_num = torch.min(torch.sum(mask > 0, dim=-1)) # []
+        device = match.device
+
         if nonzeros_num.detach().cpu().numpy() == n:
-            rand_int = torch.randint(0, n, [num])
+            # rand_int = torch.randint(0, n, [num])
+            rand_int = torch.randint(0, n, [num], device=device)
             select_match = match[:,:,rand_int]
         else:
             # If there is zero score in match, sample the non-zero matches.
@@ -23,11 +26,15 @@ class reduced_ransac(nn.Module):
             if robust:
                 num = np.minimum(nonzeros_num.detach().cpu().numpy(), num)
             for i in range(b):
-                nonzero_idx = torch.nonzero(mask[i,0,:]) # [nonzero_num,1]
-                rand_int = torch.randint(0, nonzero_idx.shape[0], [int(num)])
+                # nonzero_idx = torch.nonzero(mask[i,0,:]) # [nonzero_num,1]
+                nonzero_idx = torch.nonzero(mask[i, 0, :], as_tuple=False).to(device)
+
+                rand_int = torch.randint(0, nonzero_idx.shape[0], [int(num)], device=device)
                 select_idx = nonzero_idx[rand_int, :] # [num, 1]
                 select_idxs.append(select_idx)
-            select_idxs = torch.stack(select_idxs, 0) # [b,num,1]
+            # select_idxs = torch.stack(select_idxs, 0) # [b,num,1]
+            select_idxs = torch.stack(select_idxs, 0).to(device)
+
             select_match = torch.gather(match.transpose(1,2), index=select_idxs.repeat(1,1,4), dim=1).transpose(1,2) # [b, 4, num]
         return select_match, num
 
@@ -58,7 +65,7 @@ class reduced_ransac(nn.Module):
                 f, m = cv2.findFundamentalMat(check_match[i,:2,:].transpose(0,1).detach().cpu().numpy(), check_match[i,2:,:].transpose(0,1).detach().cpu().numpy(), cv2.FM_RANSAC, 0.1, 0.99)
             cv_f.append(f)
         cv_f = np.stack(cv_f, axis=0)
-        cv_f = torch.from_numpy(cv_f).float().to(match.get_device())
-        
+        # cv_f = torch.from_numpy(cv_f).float().to(match.get_device())
+        cv_f = torch.from_numpy(cv_f).float().to(match.device)
         return cv_f
 

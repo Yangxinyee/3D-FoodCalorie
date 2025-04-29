@@ -21,10 +21,12 @@ class Model_triangulate_pose(nn.Module):
             self.rigid_thres = 0.5
         self.filter = reduced_ransac(check_num=cfg.ransac_points, thres=self.inlier_thres, dataset=cfg.dataset)
     
-    def meshgrid(self, h, w):
+    def meshgrid(self, h, w, device=None):
         xx, yy = np.meshgrid(np.arange(0,w), np.arange(0,h))
         meshgrid = np.transpose(np.stack([xx,yy], axis=-1), [2,0,1]) # [2,h,w]
-        meshgrid = torch.from_numpy(meshgrid)
+        meshgrid = torch.from_numpy(meshgrid).float()
+        if device is not None:
+            meshgrid = meshgrid.to(device)
         return meshgrid
     
     def compute_epipolar_loss(self, fmat, match, mask):
@@ -34,7 +36,8 @@ class Model_triangulate_pose(nn.Module):
 
         points1 = match[:,:2,:]
         points2 = match[:,2:,:]
-        ones = torch.ones(num_batch, 1, match_num).to(points1.get_device())
+        # ones = torch.ones(num_batch, 1, match_num).to(points1.get_device())
+        ones = torch.ones(num_batch, 1, match_num, device=points1.device)
         points1 = torch.cat([points1, ones], 1) # [b,3,n]
         points2 = torch.cat([points2, ones], 1).transpose(1,2) # [b,n,3]
 
@@ -61,7 +64,9 @@ class Model_triangulate_pose(nn.Module):
         
         fwd_flow, bwd_flow, img1_valid_mask, img2_valid_mask, img1_flow_diff_mask, img2_flow_diff_mask = self.model_flow.inference_corres(img1, img2)
         
-        grid = self.meshgrid(img_h, img_w).float().to(img1.get_device()).unsqueeze(0).repeat(batch_size,1,1,1) #[b,2,h,w]
+        # grid = self.meshgrid(img_h, img_w).float().to(img1.get_device()).unsqueeze(0).repeat(batch_size,1,1,1) #[b,2,h,w]
+        grid = self.meshgrid(img_h, img_w, device=img1.device).unsqueeze(0).repeat(batch_size, 1, 1, 1)
+
         corres = torch.cat([(grid[:,0,:,:] + fwd_flow[:,0,:,:]).clamp(0,img_w-1.0).unsqueeze(1), \
             (grid[:,1,:,:] + fwd_flow[:,1,:,:]).clamp(0,img_h-1.0).unsqueeze(1)], 1)
         match = torch.cat([grid, corres], 1) # [b,4,h,w]
@@ -75,10 +80,14 @@ class Model_triangulate_pose(nn.Module):
 
     def forward(self, inputs, output_F=False, visualizer=None):
         images, K_ms, K_inv_ms = inputs
+        K_ms = K_ms.to(images.device)
+        K_inv_ms = K_inv_ms.to(images.device)
+
         K, K_inv = K_ms[:,0,:,:], K_inv_ms[:,0,:,:]
         assert (images.shape[1] == 3)
         img_h, img_w = int(images.shape[2] / 2), images.shape[3] 
-        img1, img2 = images[:,:,:img_h,:], images[:,:,img_h:,:]
+        # img1, img2 = images[:,:,:img_h,:], images[:,:,img_h:,:]
+        img1, img2 = images[:,:,:img_h,:].to(images.device), images[:,:,img_h:,:].to(images.device)
         batch_size = img1.shape[0]
 
         if self.mode == 'depth':
@@ -86,7 +95,8 @@ class Model_triangulate_pose(nn.Module):
         else:
             loss_pack, fwd_flow, bwd_flow, img1_valid_mask, img2_valid_mask, img1_flow_diff_mask, img2_flow_diff_mask = self.model_flow(inputs, output_flow=True)
         
-        grid = self.meshgrid(img_h, img_w).float().to(img1.get_device()).unsqueeze(0).repeat(batch_size,1,1,1) #[b,2,h,w]
+        # grid = self.meshgrid(img_h, img_w).float().to(img1.get_device()).unsqueeze(0).repeat(batch_size,1,1,1) #[b,2,h,w]
+        grid = self.meshgrid(img_h, img_w, device=img1.device).unsqueeze(0).repeat(batch_size, 1, 1, 1)
         
         fwd_corres = torch.cat([(grid[:,0,:,:] + fwd_flow[:,0,:,:]).unsqueeze(1), (grid[:,1,:,:] + fwd_flow[:,1,:,:]).unsqueeze(1)], 1)
         fwd_match = torch.cat([grid, fwd_corres], 1) # [b,4,h,w]

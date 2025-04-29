@@ -84,18 +84,19 @@ class DepthDecoder(nn.Module):
 
     def forward(self, input_features):
         self.outputs = {}
+        device = input_features[-1].device
         x = input_features[-1]
         for i in range(2, -1, -1):
             x = self.convs[("upconv", i, 0)](x)
-            x = [upsample(x)]
+            x = [upsample(x).to(device)]
 
             if self.use_skips and i > 0:
-                x += [input_features[i - 1]]
+                x += [input_features[i - 1].to(device)]
             x = torch.cat(x, 1)
             x = self.convs[("upconv", i, 1)](x)
 
             if i in self.scales:
-                f = upsample(self.convs[("dispconv", i)](x), mode='bilinear')
+                f = upsample(self.convs[("dispconv", i)](x), mode='bilinear').to(device)
                 self.outputs[("disp", i)] = self.sigmoid(f)
 
         return self.outputs
