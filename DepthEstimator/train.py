@@ -108,7 +108,7 @@ def train(cfg):
     log_file_path = os.path.join(cfg.model_dir, "train_log.txt")
     if not os.path.exists(log_file_path):
         with open(log_file_path, "w") as f:
-            f.write("iter, loss_pixel, loss_ssim, loss_pt_depth, loss_pj_depth, loss_depth_smooth, total_loss\n")
+            f.write("iter, loss_pixel, loss_ssim, loss_pt_depth, loss_pj_depth, loss_depth_smooth, total_loss, flags\n")
 
     # training
     print('starting iteration: {}.'.format(cfg.iter_start))
@@ -149,7 +149,7 @@ def train(cfg):
             loss_depth_smooth = loss_pack.get('depth_smooth_loss', torch.tensor(0.0)).mean().item()
 
             with open(log_file_path, "a") as f:
-                f.write(f"{iter_},{loss_pixel:.6f},{loss_ssim:.6f},{loss_pt_depth:.6f},{loss_pj_depth:.6f},{loss_depth_smooth:.6f},{loss.item():.6f}\n")
+                f.write(f"{iter_},{loss_pixel:.6f},{loss_ssim:.6f},{loss_pt_depth:.6f},{loss_pj_depth:.6f},{loss_depth_smooth:.6f},{loss.item():.6f},{loss_pack['flags']:.2f}\n")
 
         loss_list = []
         for key in list(loss_pack.keys()):
