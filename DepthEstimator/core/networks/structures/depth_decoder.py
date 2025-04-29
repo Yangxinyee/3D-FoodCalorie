@@ -23,6 +23,7 @@ class Conv3x3(nn.Module):
         self.conv = nn.Conv2d(int(in_channels), int(out_channels), 3)
 
     def forward(self, x):
+        x = x.to(self.conv.weight.device)
         out = self.pad(x)
         out = self.conv(out)
         return out
@@ -37,7 +38,6 @@ class ConvBlock(nn.Module):
         self.nonlin = nn.ELU(inplace=True)
 
     def forward(self, x):
-        x = x.to(self.conv.weight.device)
         out = self.conv(x)
         out = self.nonlin(out)
         return out
