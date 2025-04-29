@@ -106,12 +106,9 @@ def train(cfg):
         test_images, test_gt_depths = load_nyu_test_data(cfg.nyu_test_dir)
 
     log_file_path = os.path.join(cfg.model_dir, "train_log.txt")
-    if not os.path.exists(log_file_path):
-        with open(log_file_path, "w") as f:
-            f.write("iter, loss_pixel, loss_ssim, loss_pt_depth, loss_pj_depth, loss_depth_smooth, total_loss\n")
     with open(log_file_path, "w") as f:
-            f.write("iter, loss_pixel, loss_ssim, loss_pt_depth, loss_pj_depth, loss_depth_smooth, total_loss\n")
-
+        f.write("iter, loss_pixel, loss_ssim, loss_pt_depth, loss_pj_depth, loss_depth_smooth, total_loss\n")
+    
     # training
     print('starting iteration: {}.'.format(cfg.iter_start))
     for iter_, inputs in enumerate(tqdm(dataloader)):
@@ -150,7 +147,7 @@ def train(cfg):
             loss_pj_depth = loss_pack.get('pj_depth_loss', torch.tensor(0.0)).mean().item()
             loss_depth_smooth = loss_pack.get('depth_smooth_loss', torch.tensor(0.0)).mean().item()
 
-            with open(log_file_path, "w") as f:
+            with open(log_file_path, "a") as f:
                 f.write(f"{iter_},{loss_pixel:.6f},{loss_ssim:.6f},{loss_pt_depth:.6f},{loss_pj_depth:.6f},{loss_depth_smooth:.6f},{loss.item():.6f}\n")
 
         loss_list = []
