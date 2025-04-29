@@ -544,14 +544,14 @@ class Model_depth_pose(nn.Module):
             loss_pack['depth_smooth_loss'] = torch.zeros([2], device=point3d_1.device).requires_grad_()
             return loss_pack
 
-        # pt_depth_loss = 0
-        # pj_depth_loss = 0
-        # flow_error = 0
-        # depth_smooth_loss = 0
-        pt_depth_loss = torch.tensor(0., device=point3d_1.device)
-        pj_depth_loss = torch.tensor(0., device=point3d_1.device)
-        flow_error = torch.tensor(0., device=point3d_1.device)
-        depth_smooth_loss = torch.tensor(0., device=point3d_1.device)
+        pt_depth_loss = 0
+        pj_depth_loss = 0
+        flow_error = 0
+        depth_smooth_loss = 0
+        # pt_depth_loss = torch.tensor(0., device=point3d_1.device)
+        # pj_depth_loss = torch.tensor(0., device=point3d_1.device)
+        # flow_error = torch.tensor(0., device=point3d_1.device)
+        # depth_smooth_loss = torch.tensor(0., device=point3d_1.device)
 
         for s in range(self.depth_scale):
             disp_pred1 = F.interpolate(disp1_list[s], size=(img_h, img_w), mode='bilinear') # [b,1,h,w]
