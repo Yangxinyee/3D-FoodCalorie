@@ -534,27 +534,20 @@ class Model_depth_pose(nn.Module):
 
         
         if flag1 + flag2 + flag3 > 0:
-            # # loss_pack['pt_depth_loss'] = torch.zeros([2]).to(point3d_1.get_device()).requires_grad_()
-            # loss_pack['pt_depth_loss'] = torch.zeros([2], device=point3d_1.device).requires_grad_()
-            # # loss_pack['pj_depth_loss'] = torch.zeros([2]).to(point3d_1.get_device()).requires_grad_()
-            # loss_pack['pj_depth_loss'] = torch.zeros([2], device=point3d_1.device).requires_grad_()
-            # # loss_pack['flow_error'] = torch.zeros([2]).to(point3d_1.get_device()).requires_grad_()
-            # loss_pack['flow_error'] = torch.zeros([2], device=point3d_1.device).requires_grad_()
-            # # loss_pack['depth_smooth_loss'] = torch.zeros([2]).to(point3d_1.get_device()).requires_grad_()
-            # loss_pack['depth_smooth_loss'] = torch.zeros([2], device=point3d_1.device).requires_grad_()
-            # return loss_pack
-            weights = 0.01
-        else:
-            weights = 1.0
+            # loss_pack['pt_depth_loss'] = torch.zeros([2]).to(point3d_1.get_device()).requires_grad_()
+            loss_pack['pt_depth_loss'] = torch.zeros([2], device=point3d_1.device).requires_grad_()
+            # loss_pack['pj_depth_loss'] = torch.zeros([2]).to(point3d_1.get_device()).requires_grad_()
+            loss_pack['pj_depth_loss'] = torch.zeros([2], device=point3d_1.device).requires_grad_()
+            # loss_pack['flow_error'] = torch.zeros([2]).to(point3d_1.get_device()).requires_grad_()
+            loss_pack['flow_error'] = torch.zeros([2], device=point3d_1.device).requires_grad_()
+            # loss_pack['depth_smooth_loss'] = torch.zeros([2]).to(point3d_1.get_device()).requires_grad_()
+            loss_pack['depth_smooth_loss'] = torch.zeros([2], device=point3d_1.device).requires_grad_()
+            return loss_pack
 
         pt_depth_loss = 0
         pj_depth_loss = 0
         flow_error = 0
         depth_smooth_loss = 0
-        # pt_depth_loss = torch.tensor(0., device=point3d_1.device)
-        # pj_depth_loss = torch.tensor(0., device=point3d_1.device)
-        # flow_error = torch.tensor(0., device=point3d_1.device)
-        # depth_smooth_loss = torch.tensor(0., device=point3d_1.device)
 
         for s in range(self.depth_scale):
             disp_pred1 = F.interpolate(disp1_list[s], size=(img_h, img_w), mode='bilinear') # [b,1,h,w]
@@ -579,11 +572,8 @@ class Model_depth_pose(nn.Module):
             loss_pack['pj_depth_loss'], loss_pack['flow_error'] = pj_depth_loss * flags, flow_error * flags
             loss_pack['depth_smooth_loss'] = depth_smooth_loss * flags
         else:
-            loss_pack['pt_depth_loss'] = pt_depth_loss * weights
-            loss_pack['pj_depth_loss'], loss_pack['flow_error'] = pj_depth_loss * weights, flow_error * weights
-            loss_pack['depth_smooth_loss'] = depth_smooth_loss * weights
-            # loss_pack['pt_depth_loss'] = pt_depth_loss
-            # loss_pack['pj_depth_loss'], loss_pack['flow_error'] = pj_depth_loss, flow_error
-            # loss_pack['depth_smooth_loss'] = depth_smooth_loss
+            loss_pack['pt_depth_loss'] = pt_depth_loss
+            loss_pack['pj_depth_loss'], loss_pack['flow_error'] = pj_depth_loss, flow_error
+            loss_pack['depth_smooth_loss'] = depth_smooth_loss
         return loss_pack
 
