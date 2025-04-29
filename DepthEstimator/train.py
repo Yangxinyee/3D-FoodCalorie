@@ -63,13 +63,14 @@ def train(cfg):
                 new_key = k
             renamed_dict[new_key] = v
 
+        final_dict = OrderedDict()
         for k, v in renamed_dict.items():
             if cfg.multi_gpu:
                 name = 'module.model_pose.model_flow.' + k
             else:
                 name = 'model_pose.model_flow.' + k
-            renamed_dict[name] = v
-        missing_keys, unexp_keys = model.load_state_dict(renamed_dict, strict=False)
+            final_dict[name] = v
+        missing_keys, unexp_keys = model.load_state_dict(final_dict, strict=False)
         print(missing_keys)
         print(unexp_keys)
         print('Load Flow Pretrained Model from ' + cfg.flow_pretrained_model)
