@@ -3,7 +3,6 @@ import cv2
 sys.path.append(os.path.dirname(os.path.abspath(__file__)))
 from structures import *
 from model_triangulate_pose import Model_triangulate_pose
-from pytorch_ssim import SSIM
 sys.path.append(os.path.join(os.path.dirname(os.path.abspath(__file__)), '..', 'visualize'))
 from core.visualize import *
 import torch

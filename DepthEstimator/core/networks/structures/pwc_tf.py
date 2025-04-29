@@ -1,6 +1,6 @@
 import os, sys
 sys.path.append(os.path.dirname(os.path.abspath(__file__)))
-from net_utils import conv, deconv, warp_flow
+from net_utils import conv, warp_flow
 sys.path.append(os.path.join(os.path.dirname(os.path.abspath(__file__)), '..', '..', 'external'))
 
 import torch

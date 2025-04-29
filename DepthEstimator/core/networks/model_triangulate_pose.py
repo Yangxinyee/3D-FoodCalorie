@@ -5,8 +5,6 @@ import torch.nn as nn
 import numpy as np
 from structures import *
 from model_flow import Model_flow
-import pdb
-import cv2
 
 class Model_triangulate_pose(nn.Module):
     def __init__(self, cfg):
