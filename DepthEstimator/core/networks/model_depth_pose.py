@@ -362,8 +362,8 @@ class Model_depth_pose(nn.Module):
         pts1_3d = K_inv.bmm(torch.cat([xy, ones], 1).view([b,3,-1])) * pred1.view([b,1,-1]) # [b,3,h*w]
         pts2_coord, pts2_depth = self.reproject(P2, torch.cat([pts1_3d, ones.view([b,1,-1])], 1).transpose(1,2)) # [b,h*w, 2]
         # TODO Here some of the reprojection coordinates are invalid. (<0 or >max)
-        reproj_valid_mask = (pts2_coord > torch.Tensor([0,0], device=pred1.device)).all(-1, True).float() * \
-            (pts2_coord < torch.Tensor([w-1,h-1], device=pred1.device)).all(-1, True).float() # [b,h*w, 1]
+        reproj_valid_mask = (pts2_coord > torch.tensor([0.,0.], device=pred1.device)).all(-1, True).float() * \
+            (pts2_coord < torch.tensor([w-1.,h-1.], device=pred1.device)).all(-1, True).float() # [b,h*w, 1]
         reproj_valid_mask = (valid_mask * reproj_valid_mask.view([b,h,w,1]).permute([0,3,1,2])).detach()
         rigid_mask = rigid_mask.detach()
         pts2_depth = pts2_depth.transpose(1,2).view([b,1,h,w])
