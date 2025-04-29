@@ -21,9 +21,21 @@ def save_model(iter_, model_dir, filename, model, optimizer):
 def load_model(model_dir, filename, model, optimizer):
     data = torch.load(os.path.join(model_dir, filename))
     iter_ = data['iteration']
-    model.load_state_dict(data['model_state_dict'])
+    state_dict = data['model_state_dict']
+
+    if isinstance(model, torch.nn.DataParallel):
+        new_state_dict = OrderedDict()
+        for k, v in state_dict.items():
+            if not k.startswith('module.'):
+                new_state_dict['module.' + k] = v
+            else:
+                new_state_dict[k] = v
+        state_dict = new_state_dict
+
+    model.load_state_dict(state_dict)
     optimizer.load_state_dict(data['optimizer_state_dict'])
     return iter_, model, optimizer
+
 
 def train(cfg):
     # load model and optimizer
