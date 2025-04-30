@@ -24,7 +24,7 @@ python train.py \
   --prepared_save_dir KITTI_prepared \
   --model_dir /home/checkpoints/KITTI \
   --depth_pretrained_model /home/checkpoints/KITTI/depth/last.pth \
-  --batch_size 8 \
+  --batch_size 6 \
   --num_workers 4 \
   --no_test \
   --lr 0.0002
