@@ -19,7 +19,6 @@ class Model_depth_pose(nn.Module):
         self.w_flow_error = cfg.w_flow_error
         self.dataset = cfg.dataset
 
-        #self.depth_net = Depth_Model(cfg.depth_scale)
         self.depth_net = Depth_Model(cfg.depth_scale)
         self.model_pose = Model_triangulate_pose(cfg)
 

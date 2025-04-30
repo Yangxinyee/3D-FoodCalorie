@@ -1,5 +1,7 @@
 .DS_Store
 **/.DS_Store
 *.npz
+*.pth
+*.log
 __pycache__
 slurm-out/

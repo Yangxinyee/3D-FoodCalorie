@@ -234,17 +234,10 @@ if __name__ == '__main__':
         model = Model_flow(cfg_new)
     elif args.mode == 'depth' or args.mode == 'flow_3stage':
          model = Model_depth_pose(cfg_new)
-    # elif args.mode == 'flowposenet':
-    #     model = Model_flowposenet(cfg_new)
     
     if args.task == 'demo':
         model = Model_depth_pose(cfg_new)
 
-    # model.cuda()
-    # weights = torch.load(args.pretrained_model)
-    # model.load_state_dict(weights['model_state_dict'])
-    # model.eval()
-    # print('Model Loaded.')
     model.cuda()
     weights = torch.load(args.pretrained_model)
     # Automatically remove 'module.' prefix if exists
