@@ -19,6 +19,7 @@ python -c "import torch; print('PyTorch version:', torch.__version__); print('CU
 python train.py \
   --config_file /home/3D-FoodCalorie/DepthEstimator/config/kitti_3stage.yaml \
   --gpu 0,1,2,3 \
+  --resume \
   --multi_gpu \
   --mode depth_pose \
   --prepared_save_dir KITTI_prepared \

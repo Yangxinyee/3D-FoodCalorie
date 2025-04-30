@@ -11,7 +11,7 @@ dataset: 'kitti_depth'
 num_scales: 3
 
 # training
-num_iterations: 200000 # set -1 to use num_epochs
+num_iterations: 400000 # set -1 to use num_epochs
 num_epochs: 0
 
 # loss hyperparameters
@@ -19,11 +19,11 @@ num_epochs: 0
 w_ssim: 0.85 # w_pixel = 1 - w_ssim
 w_flow_smooth: 10.0
 w_flow_consis: 0.01
-w_geo: 0.002 #0.002
-w_pt_depth: 0.0
-w_pj_depth: 0.000
+w_geo: 0.01 #0.002
+w_pt_depth: 0.4 # 0.000
+w_pj_depth: 0.2 # 0.000
 w_flow_error: 0.01
-w_depth_smooth: 0.000
+w_depth_smooth: 0.001 # 0.000
 
 
 h_flow_consist_alpha: 3.0
