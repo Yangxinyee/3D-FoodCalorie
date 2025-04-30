@@ -181,31 +181,15 @@ def test_nyu(cfg, model, test_images, test_gt_depths):
     
     return eval_depth_res
 
-def test_single_image(img_path, model, training_hw, save_dir='./'):
-    img = cv2.imread(img_path)
-    h, w = img.shape[0:2]
-    img_resized = cv2.resize(img, (training_hw[1], training_hw[0]))
-    img_t = torch.from_numpy(np.transpose(img_resized, [2,0,1])).float().cuda().unsqueeze(0) / 255.0
-    disp = model.infer_depth(img_t)
-    disp = np.transpose(disp[0].cpu().detach().numpy(), [1,2,0])
-    disp_resized = cv2.resize(disp, (w,h))
-    depth = 1.0 / (1e-6 + disp_resized)
-
-    visualizer = Visualizer_debug(dump_dir=save_dir)
-    visualizer.save_disp_color_img(disp_resized, name='demo')
-    print('Depth prediction saved in ' + save_dir)
-
-
 if __name__ == '__main__':
     import argparse
     arg_parser = argparse.ArgumentParser(
-        description="TrianFlow testing."
+        description="Testing."
     )
     arg_parser.add_argument('-c', '--config_file', default=None, help='config file.')
     arg_parser.add_argument('-g', '--gpu', type=str, default=0, help='gpu id.')
     arg_parser.add_argument('--mode', type=str, default='depth', help='mode for testing.')
     arg_parser.add_argument('--task', type=str, default='kitti_depth', help='To test on which task, kitti_depth or kitti_flow or nyuv2 or demo')
-    arg_parser.add_argument('--image_path', type=str, default=None, help='Set this only when task==demo. Depth demo for single image.')
     arg_parser.add_argument('--pretrained_model', type=str, default=None, help='directory for loading flow pretrained models')
     arg_parser.add_argument('--result_dir', type=str, default=None, help='directory for saving predictions')
 
@@ -215,7 +199,6 @@ if __name__ == '__main__':
     with open(args.config_file, 'r') as f:
         cfg = yaml.safe_load(f)
     cfg['img_hw'] = (cfg['img_hw'][0], cfg['img_hw'][1])
-    #cfg['log_dump_dir'] = os.path.join(args.model_dir, 'log.pkl')
     cfg['model_dir'] = args.result_dir
 
     # copy attr into cfg
@@ -233,9 +216,6 @@ if __name__ == '__main__':
     if args.mode == 'flow':
         model = Model_flow(cfg_new)
     elif args.mode == 'depth' or args.mode == 'flow_3stage':
-         model = Model_depth_pose(cfg_new)
-    
-    if args.task == 'demo':
         model = Model_depth_pose(cfg_new)
 
     model.cuda()
@@ -262,6 +242,4 @@ if __name__ == '__main__':
     elif args.task == 'nyuv2':
         test_images, test_gt_depths = load_nyu_test_data(cfg_new.nyu_test_dir)
         depth_res = test_nyu(cfg_new, model, test_images, test_gt_depths)
-    elif args.task == 'demo':
-        test_single_image(args.image_path, model, training_hw=cfg['img_hw'], save_dir=args.result_dir)
 

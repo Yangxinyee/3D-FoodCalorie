@@ -6,7 +6,7 @@ from PIL import Image
 from tqdm import tqdm
 
 # === Estimate Intrinsic Matrix ===
-def get_intrinsic_from_fov(width, height, fov_deg=60):
+def get_intrinsic_from_fov(width, height, fov_deg=75):
     fov_rad = np.deg2rad(fov_deg)
     fx = fy = width / (2 * np.tan(fov_rad / 2))
     cx, cy = width / 2, height / 2
@@ -45,6 +45,7 @@ def generate_point_cloud(path):
     pcd = o3d.geometry.PointCloud()
     pcd.points = o3d.utility.Vector3dVector(points)
     pcd.colors = o3d.utility.Vector3dVector(colors)
+    pcd, _ = pcd.remove_statistical_outlier(nb_neighbors=20, std_ratio=2.0)
     o3d.io.write_point_cloud(os.path.join(path, "pointCloud.ply"), pcd)
 
 # === Batch process for all subdirectories ===
