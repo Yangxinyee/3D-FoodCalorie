@@ -71,22 +71,26 @@ def train(cfg):
                 name = 'model_pose.model_flow.' + k
             final_dict[name] = v
         missing_keys, unexp_keys = model.load_state_dict(final_dict, strict=False)
-        print(missing_keys)
-        print(unexp_keys)
+        print("missing_keys: ", missing_keys)
+        if len(unexp_keys) > 0:
+            raise ValueError('Unexpected keys: ' + str(unexp_keys))
         print('Load Flow Pretrained Model from ' + cfg.flow_pretrained_model)
     if cfg.depth_pretrained_model and not cfg.resume:
         data = torch.load(cfg.depth_pretrained_model)['model_state_dict']
         if cfg.multi_gpu:
             renamed_dict = OrderedDict()
             for k, v in data.items():
-                name = 'module.' + k
+                if k.startswith('module.'):
+                    name = k
+                else:
+                    name = 'module.' + k
                 renamed_dict[name] = v
             missing_keys, unexp_keys = model.load_state_dict(renamed_dict, strict=False)
         else:
             missing_keys, unexp_keys = model.load_state_dict(data, strict=False)
-        print(missing_keys)
-        print('##############')
-        print(unexp_keys)
+        print("missing_keys: ", missing_keys)
+        if len(unexp_keys) > 0:
+            raise ValueError('Unexpected keys: ' + str(unexp_keys))
         print('Load Depth Pretrained Model from ' + cfg.depth_pretrained_model)
    
     loss_weights_dict = generate_loss_weights_dict(cfg)
