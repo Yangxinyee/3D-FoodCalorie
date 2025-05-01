@@ -33,5 +33,5 @@ depth_sample_ratio: 0.20
 depth_scale: 3
 
 # basic info
-img_hw: [480, 640]
+img_hw: [192, 256]
 block_tri_grad: False
