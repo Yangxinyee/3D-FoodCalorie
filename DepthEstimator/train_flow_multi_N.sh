@@ -24,7 +24,7 @@ python train.py \
   --mode flow \
   --prepared_save_dir NYUv2_prepared \
   --model_dir /home/checkpoints/NYU \
-  --batch_size 16 \
+  --batch_size 64 \
   --num_workers 4 \
   --no_test \
   --lr 0.0002 | tee train_flow_multi_K.log
