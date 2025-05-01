@@ -19,7 +19,7 @@ def disp2depth(disp, min_depth=0.01, max_depth=100.0):
     depth = 1 / scaled_disp
     return scaled_disp, depth
 
-def infer_single_image(img_path, model, training_hw, save_dir='./'):
+def infer_single_image(img_path, model, training_hw, min_depth, max_depth, save_dir='./'):
     img = cv2.imread(img_path)
     h, w = img.shape[0:2]
     img_resized = cv2.resize(img, (training_hw[1], training_hw[0]))
@@ -28,12 +28,21 @@ def infer_single_image(img_path, model, training_hw, save_dir='./'):
     disp = np.transpose(disp[0].cpu().detach().numpy(), [1,2,0])
     disp_resized = cv2.resize(disp, (w,h))
     # depth = 1.0 / (1e-6 + disp_resized)
-    _, depth = disp2depth(disp_resized)
+    _, depth = disp2depth(disp_resized, min_depth, max_depth)
 
     visualizer = Visualizer_debug(dump_dir=save_dir)
     visualizer.save_depth_img(depth, name='depth_raw_pred')
-    visualizer.save_disp_color_img(disp_resized, name='Colorized_Depth')
+    visualizer.save_disp_color_img(disp_resized, name='colorized_depth_pred')
     print('Depth prediction saved in ' + save_dir)
+
+def batch_infer_directory(root_dir, model, training_hw, min_depth, max_depth):
+    subdirs = [os.path.join(root_dir, d) for d in os.listdir(root_dir) if os.path.isdir(os.path.join(root_dir, d))]
+    for subdir in tqdm(subdirs, desc="Batch Depth Inference"):
+        rgb_path = os.path.join(subdir, "rgb.png")
+        if os.path.exists(rgb_path):
+            infer_single_image(rgb_path, model, training_hw, min_depth, max_depth, save_dir=subdir)
+        else:
+            print(f"Skipping {subdir}: rgb.png not found.")
 
 def visualize_kitti_predictions(cfg, model, indices, output_dir):
     """
@@ -162,11 +171,14 @@ if __name__ == '__main__':
     )
     arg_parser.add_argument('-c', '--config_file', default=None, help='config file.')
     arg_parser.add_argument('-g', '--gpu', type=str, default=0, help='gpu id.')
-    arg_parser.add_argument('--task', type=str, default='demo', help='demo or single or dict.')
-    arg_parser.add_argument('--image_path', type=str, default=None, help='Set this only when task==infer or dict. Depth demo for single image.')
+    arg_parser.add_argument('--task', type=str, default='demo', help='demo or single or batch.')
+    arg_parser.add_argument('--image_path', type=str, default=None, help='Set this only when task==single. Depth demo for single image.')
+    arg_parser.add_argument('--root_dir', type=str, default=None, help='Set this only when task==batch. Directory containing rgb.png images.')
+    arg_parser.add_argument('--min_depth', type=float, default=0.01, help='Minimum depth value.')
+    arg_parser.add_argument('--max_depth', type=float, default=100.0, help='Maximum depth value.')
     arg_parser.add_argument('--pretrained_model', type=str, default=None, help='directory for loading flow pretrained models')
-    arg_parser.add_argument('--result_dir', type=str, default=None, help='directory for saving predictions')
-    arg_parser.add_argument('--indices', type=str, default='0,5,10,15,25', help='Image indices to visualize, comma-separated, e.g., 0,5,10,15')
+    arg_parser.add_argument('--result_dir', type=str, default=None, help='Set this only when task==demo. Directory for saving predictions')
+    arg_parser.add_argument('--indices', type=str, default='0,5,10,15,25', help='Set this only when task==demo. Image indices to visualize, comma-separated, e.g., 0,5,10,15')
 
     args = arg_parser.parse_args()
 
@@ -209,8 +221,10 @@ if __name__ == '__main__':
     print('Model Loaded.')
 
     if args.task == 'single':
-        infer_single_image(args.image_path, model, training_hw=cfg['img_hw'], save_dir=args.result_dir)
+        infer_single_image(args.image_path, model, training_hw=cfg['img_hw'], min_depth=args.min_depth, max_depth=args.max_depth, save_dir=args.result_dir)
     elif args.task == 'demo':
         visualize_kitti_predictions(cfg_new, model, indices=indices, output_dir=args.result_dir)
+    elif args.task == 'batch':
+        batch_infer_directory(args.root_dir, model, training_hw=cfg['img_hw'], min_depth=args.min_depth, max_depth=args.max_depth)
     else:
         raise ValueError('Invalid task. Please use single, demo, or dict.')
