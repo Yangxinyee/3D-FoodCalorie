@@ -1,9 +1,9 @@
 cfg_name: 'default'
 
 # dataset
-raw_base_dir: '/users/hzhan351/scratch/nyuv2'
-prepared_base_dir: '/users/hzhan351/scratch/nyuv2_prepared'
-nyu_test_dir: '/users/hzhan351/scratch/nyuv2_test'
+raw_base_dir: '/home/dataset/nyuv2'
+prepared_base_dir: '/home/dataset'
+nyu_test_dir: '/home/dataset/nyuv2_test'
 dataset: 'nyuv2'
 num_scales: 3
 
