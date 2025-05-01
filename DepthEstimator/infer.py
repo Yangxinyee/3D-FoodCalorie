@@ -191,7 +191,6 @@ if __name__ == '__main__':
     for attr in list(cfg.keys()):
         setattr(cfg_new, attr, cfg[attr])
 
-    print(cfg_new.gt_2015_dir)
     model = Model_depth_pose(cfg_new)
 
     model.cuda()
@@ -211,6 +210,6 @@ if __name__ == '__main__':
     if args.task == 'single':
         infer_single_image(args.image_path, model, training_hw=cfg['img_hw'], save_dir=args.result_dir)
     elif args.task == 'demo':
-        visualize_kitti_predictions(cfg, model, indices=indices, output_dir=args.result_dir)
+        visualize_kitti_predictions(cfg_new, model, indices=indices, output_dir=args.result_dir)
     else:
         raise ValueError('Invalid task. Please use single, demo, or dict.')
