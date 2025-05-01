@@ -19,21 +19,62 @@ def disp2depth(disp, min_depth=0.01, max_depth=100.0):
     depth = 1 / scaled_disp
     return scaled_disp, depth
 
-def infer_single_image(img_path, model, training_hw, min_depth, max_depth, save_dir='./'):
+def get_intrinsic_from_fov(width, height, fov_deg=60):
+    """ Generate a pinhole camera intrinsic matrix from image size and field of view (FoV). """
+    fov_rad = np.deg2rad(fov_deg)
+    fx = fy = width / (2 * np.tan(fov_rad / 2))  # assuming square pixels
+    cx, cy = width / 2, height / 2
+    return np.array([[fx, 0, cx],
+                     [0, fy, cy],
+                     [0,  0,  1]])
+
+# def infer_single_image(img_path, model, training_hw, min_depth, max_depth, save_dir='./'):
+#     img = cv2.imread(img_path)
+#     h, w = img.shape[0:2]
+#     img_resized = cv2.resize(img, (training_hw[1], training_hw[0]))
+#     img_t = torch.from_numpy(np.transpose(img_resized, [2,0,1])).float().cuda().unsqueeze(0) / 255.0
+#     disp = model.infer_depth(img_t)
+#     disp = np.transpose(disp[0].cpu().detach().numpy(), [1,2,0])
+#     disp_resized = cv2.resize(disp, (w,h))
+#     # depth = 1.0 / (1e-6 + disp_resized)
+#     _, depth = disp2depth(disp_resized, min_depth, max_depth)
+
+#     visualizer = Visualizer_debug(dump_dir=save_dir)
+#     visualizer.save_depth_img(depth, name='depth_raw_pred')
+#     visualizer.save_disp_color_img(disp_resized, name='colorized_depth_pred')
+#     print('Depth prediction saved in ' + save_dir)
+
+def get_intrinsic_from_fov(width, height, fov_deg=60):
+    """ Generate a pinhole camera intrinsic matrix from image size and field of view (FoV). """
+    fov_rad = np.deg2rad(fov_deg)
+    fx = fy = width / (2 * np.tan(fov_rad / 2))  # assuming square pixels
+    cx, cy = width / 2, height / 2
+    return np.array([[fx, 0, cx],
+                     [0, fy, cy],
+                     [0,  0,  1]])
+
+def infer_single_image(img_path, model, training_hw, min_depth, max_depth, save_dir='./', fov=60):
     img = cv2.imread(img_path)
     h, w = img.shape[0:2]
-    img_resized = cv2.resize(img, (training_hw[1], training_hw[0]))
+
+    img_resized = cv2.resize(img, (training_hw[1], training_hw[0]), interpolation=cv2.INTER_LINEAR)
     img_t = torch.from_numpy(np.transpose(img_resized, [2,0,1])).float().cuda().unsqueeze(0) / 255.0
-    disp = model.infer_depth(img_t)
-    disp = np.transpose(disp[0].cpu().detach().numpy(), [1,2,0])
-    disp_resized = cv2.resize(disp, (w,h))
-    # depth = 1.0 / (1e-6 + disp_resized)
-    _, depth = disp2depth(disp_resized, min_depth, max_depth)
+
+    with torch.no_grad():
+        disp = model.infer_depth(img_t)
+    disp = np.transpose(disp[0].cpu().numpy(), [1,2,0])  # (H, W, 1)
+    disp_resized = cv2.resize(disp, (w,h), interpolation=cv2.INTER_NEAREST)
+
+    # === Use estimated K for depth conversion ===
+    K = get_intrinsic_from_fov(w, h, fov_deg=fov)
+    fx = K[0, 0]
+    depth = fx / (disp_resized + 1e-6)  # Use fx only (no cx/cy), assume depth ~ fx / disp
 
     visualizer = Visualizer_debug(dump_dir=save_dir)
     visualizer.save_depth_img(depth, name='depth_raw_pred')
     visualizer.save_disp_color_img(disp_resized, name='colorized_depth_pred')
-    print('Depth prediction saved in ' + save_dir)
+    print(f'Depth prediction saved in {save_dir}, using fx={fx:.2f}')
+
 
 def batch_infer_directory(root_dir, model, training_hw, min_depth, max_depth):
     subdirs = [os.path.join(root_dir, d) for d in os.listdir(root_dir) if os.path.isdir(os.path.join(root_dir, d))]

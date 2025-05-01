@@ -6,7 +6,6 @@ from PIL import Image
 import numpy as np
 import os
 
-# 假设你有一张图
 img_path = 'test1.jpg'
 img = Image.open(img_path).convert('RGB')
 
