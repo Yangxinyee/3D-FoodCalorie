@@ -49,6 +49,7 @@ def visualize_kitti_predictions(cfg, model, indices, output_dir):
     
     visualizer = Visualizer_debug(dump_dir=output_dir)
     dataset = KITTI_2015(cfg.gt_2015_dir)
+    model.eval()
     
     all_combined_imgs = []
     for idx in tqdm(indices):
