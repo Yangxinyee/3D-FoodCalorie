@@ -23,4 +23,4 @@ python infer.py \
   --pretrained_model /home/checkpoints/KITTI/depth_pose/best.pth \
   --min_depth 0.01 \
   --max_depth 1.2 \
-  --root_dir /home/dishes \ | tee infer_demo.log
+  --root_dir /home/tests | tee infer_demo.log
