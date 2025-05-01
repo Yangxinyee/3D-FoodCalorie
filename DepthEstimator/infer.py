@@ -31,7 +31,7 @@ def infer_single_image(img_path, model, training_hw, save_dir='./'):
     _, depth = disp2depth(disp_resized)
 
     visualizer = Visualizer_debug(dump_dir=save_dir)
-    visualizer.save_depth_img(depth, name='Depth')
+    visualizer.save_depth_img(depth, name='depth_raw_pred')
     visualizer.save_disp_color_img(disp_resized, name='Colorized_Depth')
     print('Depth prediction saved in ' + save_dir)
 
