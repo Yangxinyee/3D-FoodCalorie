@@ -189,9 +189,9 @@ if __name__ == '__main__':
     
     cfg_new = pObject()
     for attr in list(cfg.keys()):
-        print(attr)
         setattr(cfg_new, attr, cfg[attr])
 
+    print(cfg_new.gt_2015_dir)
     model = Model_depth_pose(cfg_new)
 
     model.cuda()
