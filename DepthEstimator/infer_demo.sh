@@ -22,4 +22,4 @@ python infer.py \
   --task demo \
   --pretrained_model /home/checkpoints/KITTI/depth_pose/best.pth \
   --result_dir /home/results \
-  --indices 0,5,10,50,46 | tee infer_demo.log
+  --indices 0,5,10,80,100 | tee infer_demo.log
