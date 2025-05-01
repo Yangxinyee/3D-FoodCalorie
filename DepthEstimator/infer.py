@@ -5,6 +5,9 @@ import torch
 import numpy as np
 import argparse
 import matplotlib.pyplot as plt
+import torch.nn.functional as F
+import torchvision.transforms as T
+from PIL import Image
 from tqdm import tqdm
 from core.dataset import KITTI_2015
 from core.networks.model_depth_pose import Model_depth_pose
@@ -75,13 +78,93 @@ def infer_single_image(img_path, model, training_hw, min_depth, max_depth, save_
     visualizer.save_disp_color_img(disp_resized, name='colorized_depth_pred')
     print(f'Depth prediction saved in {save_dir}, using fx={fx:.2f}')
 
+def sliding_window_inference(image_path, model, input_size=(256, 832), orig_size=(480, 640), stride_ratio=0.5, save_patches=False, patch_save_dir="model_inputs", save_dir="model_outputs"):
+    """
+    Args:
+        image_path (str): path to input RGB image
+        model (torch.nn.Module): depth prediction model
+        input_size (tuple): (H, W) input size expected by the model
+        orig_size (tuple): original image size (H, W), default is (480, 640)
+        stride_ratio (float): stride ratio w.r.t input height (e.g. 0.5 means 50% overlap)
+        save_patches (bool): whether to save input patches for inspection
+        patch_save_dir (str): directory to save patches
 
-def batch_infer_directory(root_dir, model, training_hw, min_depth, max_depth):
+    Returns:
+        depth_map_cropped (np.ndarray): predicted depth map of size (480, 640)
+    """
+
+    assert os.path.exists(image_path), f"Image not found: {image_path}"
+    img = Image.open(image_path).convert('RGB')
+    transform = T.ToTensor()
+    img_tensor = transform(img)  # [3, H, W]
+
+    orig_H, orig_W = orig_size
+    in_H, in_W = input_size
+
+    # === Padding image to match model input size along width ===
+    pad_h = max(0, in_H - orig_H)
+    pad_w = max(0, in_W - orig_W)
+    pad_top = pad_h // 2
+    pad_bottom = pad_h - pad_top
+    pad_left = pad_w // 2
+    pad_right = pad_w - pad_left
+
+    img_padded = F.pad(img_tensor, (pad_left, pad_right, pad_top, pad_bottom))  # [3, H_pad, W_pad]
+    img_padded = img_padded.unsqueeze(0).cuda()  # [1, 3, H_pad, W_pad]
+
+    _, _, H_pad, W_pad = img_padded.shape
+    stride_h = int(in_H * stride_ratio)
+
+    disp_full = torch.zeros((1, 1, H_pad, W_pad)).cuda()
+    count_map = torch.zeros((1, 1, H_pad, W_pad)).cuda()
+
+    if save_patches:
+        os.makedirs(patch_save_dir, exist_ok=True)
+
+    idx = 0
+    for y in range(0, H_pad - in_H + 1, stride_h):
+        patch = img_padded[:, :, y:y+in_H, :]  # [1, 3, 256, 832]
+
+        if save_patches:
+            patch_img = patch[0].permute(1, 2, 0).cpu().numpy()
+            patch_img = (patch_img * 255).astype(np.uint8)
+            Image.fromarray(patch_img).save(os.path.join(patch_save_dir, f'patch_{idx}.jpg'))
+
+        with torch.no_grad():
+            disp_patch = model.infer_depth(patch)  # [1, 1, 256, 832]
+        disp_full[:, :, y:y+in_H, :] += disp_patch
+        count_map[:, :, y:y+in_H, :] += 1
+        idx += 1
+
+    # === Normalize overlapped regions ===
+    disp_full /= (count_map + 1e-6)
+
+    # === Crop back to original image region ===
+    disp_cropped = disp_full[:, :, pad_top:pad_top+orig_H, pad_left:pad_left+orig_W]
+    disp_map = disp_cropped.squeeze().cpu().numpy()  # [H, W]
+    
+    K = get_intrinsic_from_fov(orig_W, orig_H, fov_deg=60)  # same as infer_single_image()
+    fx = K[0, 0]
+    depth_map = fx / (disp_map + 1e-6)  # [H, W]
+
+    visualizer = Visualizer_debug(dump_dir=save_dir)
+    disp = 1.0 / (disp_map + 1e-6)
+    disp = np.clip(disp, 0, np.percentile(disp, 95))  # 可选增强可视化效果
+
+    visualizer.save_depth_img(depth_map, name='depth_raw_pred')           # 保存灰度深度图
+    visualizer.save_disp_color_img(disp_map, name='colorized_depth_pred')             # 保存彩色 disparity 图
+    print(f"Saved depth_raw_pred & colorized_depth_pred to {save_dir}")
+
+
+def batch_infer_directory(root_dir, model, training_hw, min_depth, max_depth, sliding_window=False):
     subdirs = [os.path.join(root_dir, d) for d in os.listdir(root_dir) if os.path.isdir(os.path.join(root_dir, d))]
     for subdir in tqdm(subdirs, desc="Batch Depth Inference"):
         rgb_path = os.path.join(subdir, "rgb.png")
         if os.path.exists(rgb_path):
-            infer_single_image(rgb_path, model, training_hw, min_depth, max_depth, save_dir=subdir)
+            if sliding_window:
+                sliding_window_inference(rgb_path, model, training_hw, save_dir=subdir)
+            else:
+                infer_single_image(rgb_path, model, training_hw, min_depth, max_depth, save_dir=subdir)
         else:
             print(f"Skipping {subdir}: rgb.png not found.")
 
