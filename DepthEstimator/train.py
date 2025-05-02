@@ -198,7 +198,7 @@ if __name__ == '__main__':
     arg_parser.add_argument('--iter_start', type=int, default=0, help='starting iteration.')
     arg_parser.add_argument('--lr', type=float, default=0.0001, help='learning rate')
     arg_parser.add_argument('--num_workers', type=int, default=4, help='number of workers.')
-    arg_parser.add_argument('--log_interval', type=int, default=100, help='interval for printing loss.')
+    arg_parser.add_argument('--log_interval', type=int, default=1, help='interval for printing loss.')
     arg_parser.add_argument('--test_interval', type=int, default=2000, help='interval for evaluation.')
     arg_parser.add_argument('--save_interval', type=int, default=1000, help='interval for saving models.')
     arg_parser.add_argument('--mode', type=str, default='flow', help='training mode.')
