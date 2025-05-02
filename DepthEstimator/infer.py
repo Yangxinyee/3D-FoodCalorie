@@ -156,7 +156,7 @@ def sliding_window_inference(image_path, model, input_size=(256, 832), orig_size
     print(f"Saved depth_raw_pred & colorized_depth_pred to {save_dir}")
 
 
-def batch_infer_directory(root_dir, model, training_hw, min_depth, max_depth, sliding_window=True):
+def batch_infer_directory(root_dir, model, training_hw, min_depth, max_depth, sliding_window=False):
     subdirs = [os.path.join(root_dir, d) for d in os.listdir(root_dir) if os.path.isdir(os.path.join(root_dir, d))]
     for subdir in tqdm(subdirs, desc="Batch Depth Inference"):
         rgb_path = os.path.join(subdir, "rgb.png")

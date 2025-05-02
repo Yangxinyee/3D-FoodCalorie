@@ -1,9 +1,9 @@
 cfg_name: 'default'
 
 # dataset
-raw_base_dir: '/users/hzhan351/scratch/nyuv2'
-prepared_base_dir: '/users/hzhan351/scratch/nyuv2_prepared'
-nyu_test_dir: '/users/hzhan351/scratch/nyuv2_test'
+raw_base_dir: '/home/dataset/nyuv2'
+prepared_base_dir: '/home/dataset'
+nyu_test_dir: '/home/dataset/nyuv2_test'
 dataset: 'nyuv2'
 num_scales: 3
 
@@ -33,5 +33,5 @@ depth_sample_ratio: 0.20
 depth_scale: 3
 
 # basic info
-img_hw: [480, 640]
+img_hw: [192, 256]
 block_tri_grad: False
