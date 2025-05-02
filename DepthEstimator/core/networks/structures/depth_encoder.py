@@ -295,7 +295,9 @@ class DepthEncoder(nn.Module):
         self.num_ch_enc = np.array([64, 128, 224])
         self.depth = [4, 4, 10]
         self.dims = [64, 128, 224]
-        if height == 192 and width == 640:
+        if height == 192 and width == 256:
+            self.dilation = [[1, 2, 2], [1, 2, 2], [1, 2, 2, 1, 2, 2, 1, 2, 2]]
+        elif height == 192 and width == 640:
             self.dilation = [[1, 2, 3], [1, 2, 3], [1, 2, 3, 1, 2, 3, 2, 4, 6]]
         elif height == 320 and width == 1024:
             self.dilation = [[1, 2, 3], [1, 2, 3], [1, 2, 3, 1, 2, 3, 2, 4, 6]]
