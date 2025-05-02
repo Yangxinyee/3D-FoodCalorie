@@ -17,10 +17,10 @@ cd /home/3D-FoodCalorie/DepthEstimator
 python -c "import torch; print('PyTorch version:', torch.__version__); print('CUDA available:', torch.cuda.is_available()); print('CUDA version:', torch.version.cuda if torch.cuda.is_available() else 'NA'); print('GPU count:', torch.cuda.device_count()); print('GPU name:', torch.cuda.get_device_name(0) if torch.cuda.device_count() > 0 else 'NA')"
 
 python infer.py \
-  --config_file /home/3D-FoodCalorie/DepthEstimator/config/kitti_3stage.yaml \
+  --config_file /home/3D-FoodCalorie/DepthEstimator/config/nyu_3stage.yaml \
   --gpu 0 \
   --task batch \
-  --pretrained_model /home/checkpoints/KITTI/depth_pose/best.pth \
+  --pretrained_model /home/checkpoints/NYU/nyu_192.pth \
   --min_depth 0.01 \
   --max_depth 1.2 \
   --root_dir /home/tests | tee infer_demo.log
