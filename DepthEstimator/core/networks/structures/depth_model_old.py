@@ -194,7 +194,7 @@ class Depth_Model_old(nn.Module):
     def __init__(self, depth_scale, num_layers=18):
         super(Depth_Model_old, self).__init__()
         self.depth_scale = depth_scale
-        self.encoder = ResnetEncoder(num_layers=num_layers, pretrained=False)
+        self.encoder = ResnetEncoder(num_layers=num_layers, pretrained=True)
         self.decoder = DepthDecoder(self.encoder.num_ch_enc, scales=range(depth_scale))
 
     def forward(self, img):
