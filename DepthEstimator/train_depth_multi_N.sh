@@ -26,7 +26,7 @@ python train.py \
   --model_dir /home/checkpoints/NYU \
   --flow_pretrained_model /home/checkpoints/NYU/flow/pretrained.pth \
   --resume \
-  --batch_size 32 \
+  --batch_size 8 \
   --num_workers 4 \
   --no_test \
   --lr 0.0002 | tee train_depth_multi_K.log
