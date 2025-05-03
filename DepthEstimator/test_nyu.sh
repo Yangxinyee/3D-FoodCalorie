@@ -21,7 +21,7 @@ python test.py \
 --gpu 0 \
 --mode depth \
 --task nyuv2 \
---pretrained_model /home/checkpoints/NYU/depth/last.pth \
+--pretrained_model /home/checkpoints/NYU/depth/iter_42999.pth \
 --result_dir /home/results | tee test_nyu.log
 
 echo "Testing complete!"
