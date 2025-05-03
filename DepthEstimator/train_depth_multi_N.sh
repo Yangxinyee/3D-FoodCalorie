@@ -25,6 +25,7 @@ python train.py \
   --prepared_save_dir NYUv2_prepared \
   --model_dir /home/checkpoints/NYU \
   --flow_pretrained_model /home/checkpoints/NYU/flow/pretrained.pth \
+  --resume \
   --batch_size 32 \
   --num_workers 4 \
   --no_test \

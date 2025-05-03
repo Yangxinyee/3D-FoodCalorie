@@ -30,7 +30,7 @@ ransac_points: 6000
 # Depth Setting
 depth_match_num: 6000
 depth_sample_ratio: 0.20
-depth_scale: 3
+depth_scale: 1
 
 # basic info
 img_hw: [192, 256]
