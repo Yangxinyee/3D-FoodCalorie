@@ -24,8 +24,7 @@ python train.py \
   --mode depth \
   --prepared_save_dir NYUv2_prepared \
   --model_dir /home/checkpoints/NYU \
-  --flow_pretrained_model /home/checkpoints/NYU/flow/pretrained.pth \
-  --resume \
+  --flow_pretrained_model /home/checkpoints/NYU/flow/last.pth \
   --batch_size 8 \
   --num_workers 4 \
   --no_test \
