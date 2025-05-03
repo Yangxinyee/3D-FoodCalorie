@@ -33,7 +33,10 @@ def load_model(model_dir, filename, model, optimizer):
         state_dict = new_state_dict
 
     model.load_state_dict(state_dict)
-    optimizer.load_state_dict(data['optimizer_state_dict'])
+    try:
+        optimizer.load_state_dict(data['optimizer_state_dict'])
+    except ValueError:
+        print("Use new optimizer state dict.")
     return iter_, model, optimizer
 
 
