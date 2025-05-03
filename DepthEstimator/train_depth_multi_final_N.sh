@@ -18,17 +18,16 @@ python -c "import torch; print('PyTorch version:', torch.__version__); print('CU
 
 # Run the second-stage training script
 python train.py \
-  --config_file /home/3D-FoodCalorie/DepthEstimator/config/nyu.yaml \
+  --config_file /home/3D-FoodCalorie/DepthEstimator/config/nyu_3stage.yaml \
   --gpu 0,1,2,3 \
   --multi_gpu \
-  --mode depth \
+  --mode depth_pose \
   --prepared_save_dir NYUv2_prepared \
   --model_dir /home/checkpoints/NYU \
-  --flow_pretrained_model /home/checkpoints/NYU/flow/pretrained.pth \
-  --batch_size 4 \
+  --depth_pretrained_model /home/checkpoints/NYU/depth/last.pth \
+  --batch_size 8 \
   --num_workers 4 \
   --no_test \
-  --resume \
-  --lr 0.0002 | tee train_depth_multi_K.log
+  --lr 0.0002 | tee train_depth_multi_final_K.log
 
 echo "Second-stage Training (depth) complete!"
