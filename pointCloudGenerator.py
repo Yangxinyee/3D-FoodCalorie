@@ -15,7 +15,7 @@ def get_intrinsic_from_fov(width, height, fov_deg=75):
 # === Generate point cloud from one dish directory ===
 def generate_point_cloud(path):
     rgb_path = os.path.join(path, "rgb.png")
-    depth_path = os.path.join(path, "depth_raw.png")
+    depth_path = os.path.join(path, "depth_raw_pred_depth.png")
 
     if not os.path.exists(rgb_path) or not os.path.exists(depth_path):
         print(f"[Warning] Missing rgb or depth file in {path}, skipping.")
