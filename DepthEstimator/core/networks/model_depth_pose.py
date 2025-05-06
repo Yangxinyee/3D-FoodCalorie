@@ -504,13 +504,13 @@ class Model_depth_pose(nn.Module):
         loss_pack, F_final, img1_valid_mask, img1_rigid_mask, fwd_flow, fwd_match = self.model_pose(inputs, output_F=True, visualizer=visualizer)
         if F_final is None:
             # loss_pack['pt_depth_loss'] = torch.zeros([2]).to(point3d_1.get_device()).requires_grad_()
-            loss_pack['pt_depth_loss'] = torch.zeros([2], device=inputs.device).requires_grad_()
+            loss_pack['pt_depth_loss'] = torch.zeros([2], device=images.device).requires_grad_()
             # loss_pack['pj_depth_loss'] = torch.zeros([2]).to(point3d_1.get_device()).requires_grad_()
-            loss_pack['pj_depth_loss'] = torch.zeros([2], device=inputs.device).requires_grad_()
+            loss_pack['pj_depth_loss'] = torch.zeros([2], device=images.device).requires_grad_()
             # loss_pack['flow_error'] = torch.zeros([2]).to(point3d_1.get_device()).requires_grad_()
-            loss_pack['flow_error'] = torch.zeros([2], device=inputs.device).requires_grad_()
+            loss_pack['flow_error'] = torch.zeros([2], device=images.device).requires_grad_()
             # loss_pack['depth_smooth_loss'] = torch.zeros([2]).to(point3d_1.get_device()).requires_grad_()
-            loss_pack['depth_smooth_loss'] = torch.zeros([2], device=inputs.device).requires_grad_()
+            loss_pack['depth_smooth_loss'] = torch.zeros([2], device=images.device).requires_grad_()
             return loss_pack
         # infer depth
         disp1_list = self.depth_net(img1) # Nscales * [B, 1, H, W]
