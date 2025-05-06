@@ -214,7 +214,7 @@ class Model_depth_pose(nn.Module):
         # F: [b, 3, 3] K: [b, 3, 3] depth_match: [b ,4, n]
         #verify_match = self.rand_sample(depth_match, 5000) # [b,4,100]
         verify_match = depth_match.transpose(1,2).cpu().detach().numpy()
-        K_inv = torch.inverse(K)
+        K_inv = torch.inverse(K.clone())
         b = fmat.shape[0]
         fmat_ = K.transpose(1,2).bmm(fmat)
         essential_mat = fmat_.bmm(K)
@@ -502,6 +502,16 @@ class Model_depth_pose(nn.Module):
         
         # Pose Network
         loss_pack, F_final, img1_valid_mask, img1_rigid_mask, fwd_flow, fwd_match = self.model_pose(inputs, output_F=True, visualizer=visualizer)
+        if F_final is None:
+            # loss_pack['pt_depth_loss'] = torch.zeros([2]).to(point3d_1.get_device()).requires_grad_()
+            loss_pack['pt_depth_loss'] = torch.zeros([2], device=point3d_1.device).requires_grad_()
+            # loss_pack['pj_depth_loss'] = torch.zeros([2]).to(point3d_1.get_device()).requires_grad_()
+            loss_pack['pj_depth_loss'] = torch.zeros([2], device=point3d_1.device).requires_grad_()
+            # loss_pack['flow_error'] = torch.zeros([2]).to(point3d_1.get_device()).requires_grad_()
+            loss_pack['flow_error'] = torch.zeros([2], device=point3d_1.device).requires_grad_()
+            # loss_pack['depth_smooth_loss'] = torch.zeros([2]).to(point3d_1.get_device()).requires_grad_()
+            loss_pack['depth_smooth_loss'] = torch.zeros([2], device=point3d_1.device).requires_grad_()
+            return loss_pack
         # infer depth
         disp1_list = self.depth_net(img1) # Nscales * [B, 1, H, W]
         disp2_list = self.depth_net(img2)

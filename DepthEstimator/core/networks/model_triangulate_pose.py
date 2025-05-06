@@ -108,6 +108,12 @@ class Model_triangulate_pose(nn.Module):
         # img1_score_mask = img1_valid_mask
         
         F_final_1 = self.filter(fwd_match, img1_score_mask, visualizer=visualizer)
+
+        if F_final_1 is None and output_F:
+            return loss_pack, None, None, None, None, None
+        elif F_final_1 is None:
+            return None
+        
         _, dist_map_1 = self.compute_epipolar_loss(F_final_1, fwd_match.view([batch_size,4,-1]), img1_valid_mask.view([batch_size,1,-1]))
         dist_map_1 = dist_map_1.view([batch_size, img_h, img_w, 1])
 

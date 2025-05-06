@@ -28,10 +28,12 @@ class reduced_ransac(nn.Module):
             for i in range(b):
                 # nonzero_idx = torch.nonzero(mask[i,0,:]) # [nonzero_num,1]
                 nonzero_idx = torch.nonzero(mask[i, 0, :], as_tuple=False).to(device)
-
-                rand_int = torch.randint(0, nonzero_idx.shape[0], [int(num)], device=device)
-                select_idx = nonzero_idx[rand_int, :] # [num, 1]
-                select_idxs.append(select_idx)
+                if nonzero_idx.shape[0] == 0:
+                    return None, 0
+                else:
+                    rand_int = torch.randint(0, nonzero_idx.shape[0], [int(num)], device=device)
+                    select_idx = nonzero_idx[rand_int, :] # [num, 1]
+                    select_idxs.append(select_idx)
             # select_idxs = torch.stack(select_idxs, 0) # [b,num,1]
             select_idxs = torch.stack(select_idxs, 0).to(device)
 
@@ -55,6 +57,8 @@ class reduced_ransac(nn.Module):
         # Sample matches for RANSAC 8-point and best F selection
         top_ratio_match, top_ratio_mask = self.top_ratio_sample(match, mask, ratio=0.20) # [b, 4, ratio*H*W] 
         check_match, check_num = self.robust_rand_sample(top_ratio_match, top_ratio_mask, num=self.check_num) # [b, 4, check_num]
+        if check_match is None:
+            return None
         check_match = check_match.contiguous()
 
         cv_f = []
