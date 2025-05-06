@@ -135,7 +135,8 @@ class Model_depth_pose(nn.Module):
         # match: [b, 4, n] P: [B, 3, 4]
         b, n = match.shape[0], match.shape[2]
         K = P1[:,:,:3] # P1 with identity rotation and zero translation
-        K_inv = torch.inverse(K)
+        K = K.contiguous()
+        K_inv = torch.inverse(K.clone())
         RT1 = K_inv.bmm(P1) # [b, 3, 4]
         RT2 = K_inv.bmm(P2)
         # ones = torch.ones([b,1,n]).to(match.get_device())
