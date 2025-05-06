@@ -214,7 +214,6 @@ class Model_depth_pose(nn.Module):
         # F: [b, 3, 3] K: [b, 3, 3] depth_match: [b ,4, n]
         #verify_match = self.rand_sample(depth_match, 5000) # [b,4,100]
         verify_match = depth_match.transpose(1,2).cpu().detach().numpy()
-        K_inv = torch.inverse(K.clone())
         b = fmat.shape[0]
         fmat_ = K.transpose(1,2).bmm(fmat)
         essential_mat = fmat_.bmm(K)
