@@ -73,8 +73,12 @@ class DepthFinetuneDataset(torch.utils.data.Dataset):
         depth_path = os.path.join(sample_dir, 'depth_raw.png')
 
         # Load images
-        rgb = Image.open(rgb_path).convert('RGB')
-        depth = Image.open(depth_path)
+        try:
+            rgb = Image.open(rgb_path).convert('RGB')
+            depth = Image.open(depth_path)
+        except Exception as e:
+            print(f"[WARNING] Skipping invalid image at {sample_dir}: {e}")
+            return self.__getitem__((idx + 1) % len(self.sample_dirs))
 
         # Resize
         rgb = rgb.resize((self.target_size[1], self.target_size[0]), Image.BILINEAR)
