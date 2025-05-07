@@ -351,7 +351,7 @@ def main():
                                   num_workers=4, collate_fn=collate_fn, pin_memory=True)
 
     model = get_model_instance_segmentation(num_classes=104).to(device)
-    model = DDP(model, device_ids=[args.local_rank])
+    model = DDP(model, device_ids=[device_id])
 
     optimizer = torch.optim.SGD([p for p in model.parameters() if p.requires_grad],
                                 lr=0.005, momentum=0.9, weight_decay=0.0005)
