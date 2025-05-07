@@ -155,7 +155,6 @@ def main():
     parser = argparse.ArgumentParser()
     parser.add_argument('-c', '--config_file', default=None, help='config file.')
     parser.add_argument('--pretrained_model', type=str, default=None, help='pretrained model path.')
-    parser.add_argument('--local_rank', type=int, default=0)
     parser.add_argument('--batch_size', type=int, default=8)
     parser.add_argument('--save_path', type=str, default='./checkpoints')
     parser.add_argument('--resume', action='store_true')
@@ -185,8 +184,9 @@ def main():
     dist.init_process_group("nccl")
     rank = dist.get_rank()
     world_size = dist.get_world_size()
-    torch.cuda.set_device(args.local_rank)
-    device = torch.device(f"cuda:{args.local_rank}")
+    device_id = rank % torch.cuda.device_count()
+    device = torch.device(f"cuda:{device_id}")
+    torch.cuda.set_device(device)
 
     os.makedirs(args.save_path, exist_ok=True)
 
@@ -223,7 +223,7 @@ def main():
     model = Model_depth_pose(cfg_new)
     model = load_model(args.pretrained_model, model)
     model = model.to(device)
-    model = DDP(model, device_ids=[args.local_rank])
+    model = DDP(model, device_ids=[device_id])
     for name, param in model.named_parameters():
         print(name)
     raise ValueError("stop")
