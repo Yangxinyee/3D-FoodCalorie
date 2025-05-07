@@ -21,6 +21,7 @@ class FoodSeg103Dataset(torch.utils.data.Dataset):
         self.mask_dir = os.path.join(root, "Images", "ann_dir", subset)
         self.imgs = sorted(os.listdir(self.img_dir))
         self.masks = sorted(os.listdir(self.mask_dir))
+        assert len(self.imgs) == len(self.masks), f"Mismatch: {len(self.imgs)} images vs {len(self.masks)} masks"
 
     def __getitem__(self, idx):
         img_path = os.path.join(self.img_dir, self.imgs[idx])
