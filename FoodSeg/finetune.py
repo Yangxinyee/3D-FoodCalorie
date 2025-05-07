@@ -312,3 +312,6 @@ def main():
         torch.save(save_dict, checkpoint_path)
         torch.save(save_dict, last_path)
         print(f"[INFO] Checkpoint saved at {checkpoint_path}")
+
+if __name__ == "__main__":
+    main()
