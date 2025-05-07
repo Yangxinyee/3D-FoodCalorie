@@ -13,9 +13,9 @@ from diffusers import StableDiffusionInpaintPipeline
 MODEL_PATH = "mrcnn_foodseg103.pth"
 NUM_CLASSES = 104  # 103 food classes + background
 DEVICE = torch.device("cuda" if torch.cuda.is_available() else "cpu")
-INPUT_IMAGE = "Images/Inputs/00004520.jpg"
-OUTPUT_DIR = "output"
-CATEGORY_PATH = "../FoodSeg103/category_id.txt"
+INPUT_DIR = "../dataset/nutrition5k_dataset/imagery/realsense_overhead"
+OUTPUT_DIR = "../dataset/nutrition5k_dataset/imagery/mrcnn_output"
+CATEGORY_PATH = "../dataset/FoodSeg103/category_id.txt"
 
 # -------- MODEL SETUP --------
 def get_model():
@@ -72,40 +72,38 @@ def draw_instance_predictions(img, boxes, masks, labels, scores, score_thresh=0.
     return img.astype(np.uint8)
 
 # -------- MAIN FUNCTION --------
-def run_inference(image_path):
+def process_directory(input_dir, output_dir):
     model = get_model()
+    os.makedirs(output_dir, exist_ok=True)
 
-    # Load + resize image
-    image = Image.open(image_path).convert("RGB").resize((256, 192))
-    orig = np.array(image)
+    for dish_folder in os.listdir(input_dir):
+        dish_path = os.path.join(input_dir, dish_folder)
+        rgb_path = os.path.join(dish_path, "rgb.png")
 
-    # Save the resized input image
-    os.makedirs(OUTPUT_DIR, exist_ok=True)
-    base_name = os.path.basename(image_path)
-    name, _ = os.path.splitext(base_name)
-    resized_input_path = os.path.join(OUTPUT_DIR, f"{name}_resized.jpg")
-    cv2.imwrite(resized_input_path, cv2.cvtColor(orig, cv2.COLOR_RGB2BGR))
-    print(f"[INFO] Saved resized input to {resized_input_path}")
+        if not os.path.isfile(rgb_path):
+            print(f"[WARN] rgb.png not found in {dish_path}")
+            continue
 
-    transform = T.ToTensor()
-    img_tensor = transform(image).to(DEVICE)
+        # Load and preprocess image
+        image = Image.open(rgb_path).convert("RGB").resize((256, 192))
+        orig = np.array(image)
 
-    with torch.no_grad():
-        output = model([img_tensor])[0]
+        transform = T.ToTensor()
+        img_tensor = transform(image).to(DEVICE)
 
-    masks = output["masks"].squeeze(1).cpu().numpy() > 0.5
-    boxes = output["boxes"].cpu().numpy()
-    labels = output["labels"].cpu().numpy()
-    scores = output["scores"].cpu().numpy()
+        with torch.no_grad():
+            output = model([img_tensor])[0]
 
-    result = draw_instance_predictions(orig.copy(), boxes, masks, labels, scores)
+        masks = output["masks"].squeeze(1).cpu().numpy() > 0.5
+        # boxes = output["boxes"].cpu().numpy()
+        labels = output["labels"].cpu().numpy()
+        # scores = output["scores"].cpu().numpy()
 
-    os.makedirs(OUTPUT_DIR, exist_ok=True)
-    base_name = os.path.basename(image_path)
-    name, _ = os.path.splitext(base_name)
-    output_path = os.path.join(OUTPUT_DIR, f"{name}_masked.jpg")
-    cv2.imwrite(output_path, cv2.cvtColor(result, cv2.COLOR_RGB2BGR))
-    print(f"[INFO] Saved result image to {output_path}")
+        result = draw_instance_predictions(orig.copy(), masks, labels)
+
+        output_path = os.path.join(output_dir, f"{dish_folder}_mask.png")
+        cv2.imwrite(output_path, cv2.cvtColor(result, cv2.COLOR_RGB2BGR))
+        print(f"[INFO] Saved mask to {output_path}")
 
 if __name__ == "__main__":
-    run_inference(INPUT_IMAGE)
+    process_directory(INPUT_DIR, OUTPUT_DIR)
