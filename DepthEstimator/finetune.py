@@ -158,6 +158,7 @@ def main():
     parser.add_argument('--batch_size', type=int, default=8)
     parser.add_argument('--save_path', type=str, default='./checkpoints')
     parser.add_argument('--resume', action='store_true')
+    parser.add_argument('--encoder_decoder', type=int, default=0, help='0: encoder-decoder, 1: encoder-only, 2: decoder-only')
     parser.add_argument('--num_epochs', type=int, default=30)
     parser.add_argument('--mode', type=str, default='depth', help='training mode.')
     parser.add_argument('--dataset_root', type=str, required=True)
@@ -225,9 +226,19 @@ def main():
     model = model.to(device)
     model = DDP(model, device_ids=[device_id])
     for name, param in model.named_parameters():
-        print(name)
-    raise ValueError("stop")
-
+        if args.encoder_decoder == 0:
+            if not (name.startswith("module.depth_net.encoder") or name.startswith("module.depth_net.decoder")):
+                param.requires_grad = False
+        elif args.encoder_decoder == 1:
+            if not name.startswith("module.depth_net.encoder"):
+                param.requires_grad = False
+        elif args.encoder_decoder == 2:
+            if not name.startswith("module.depth_net.decoder"):
+                param.requires_grad = False
+            pass
+        else:
+            raise ValueError(f"Invalid encoder_decoder value: {args.encoder_decoder}")
+        
     optimizer = torch.optim.AdamW(
         [p for p in model.parameters() if p.requires_grad],
         lr=1e-4,

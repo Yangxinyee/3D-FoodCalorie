@@ -18,4 +18,5 @@ torchrun \
   --dataset_root /home/dataset/nutrition5k_dataset/imagery/realsense_overhead \
   --save_path /home/checkpoints/Nutrition5K_depth \
   --pretrained_model /home/checkpoints/NYU/depth/best.pth \
-  --config_file /home/3D-FoodCalorie/DepthEstimator/config/nyu.yaml
+  --config_file /home/3D-FoodCalorie/DepthEstimator/config/nyu.yaml \
+  --encoder_decoder 0
