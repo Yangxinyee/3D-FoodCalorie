@@ -28,12 +28,6 @@ class FoodSeg103Dataset(torch.utils.data.Dataset):
         mask_path = os.path.join(self.mask_dir, self.masks[idx])
         
         img = Image.open(img_path).convert("RGB")
-
-        img = img.convert("RGB")
-        img_tensor = T.ToTensor()(img)
-        if img_tensor.shape[0] != 3:
-            raise ValueError(f"Image {img_path} has {img_tensor.shape[0]} channels instead of 3")
-        
         mask = Image.open(mask_path)
         # Resize both image and mask to 192x256 BEFORE any further processing
         resize_size = (256, 192)  # (width, height) as required by PIL
@@ -92,6 +86,8 @@ class FoodSeg103Dataset(torch.utils.data.Dataset):
 
         if self.transforms is not None:
             img = self.transforms(img)
+            if img.ndim != 3 or img.shape[0] != 3:
+                raise ValueError(f"[BAD IMAGE] {img_path} has shape {img.shape} after transform")
 
         return img, target
 
