@@ -153,8 +153,8 @@ def evaluate_on_dataset(model, data_loader, device, min_depth=1e-3, max_depth=1.
 
 def main():
     parser = argparse.ArgumentParser()
-    parser.add_argument('-c', '--config_file', default=None, help='config file.')
-    parser.add_argument('--pretrained_model', type=str, default=None, help='pretrained model path.')
+    parser.add_argument('--pretrained_model', type=str, required=True, help='Path to pretrained model.')
+    parser.add_argument('--config_file', type=str, required=True, help='Path to config YAML.')
     parser.add_argument('--batch_size', type=int, default=8)
     parser.add_argument('--save_path', type=str, default='./checkpoints')
     parser.add_argument('--resume', action='store_true')
