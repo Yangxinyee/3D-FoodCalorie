@@ -1,4 +1,5 @@
 import os
+import yaml
 import numpy as np
 import argparse
 import torch
@@ -11,6 +12,7 @@ from collections import OrderedDict
 from torch.nn.parallel import DistributedDataParallel as DDP
 from torch.utils.data import DataLoader, DistributedSampler
 from core.evaluation.evaluate_depth import eval_depth
+from core.networks.model_depth_pose import Model_depth_pose
 
 seed = 42
 
@@ -35,8 +37,8 @@ def load_model(path, model):
         else:
             new_state_dict[k] = v
     state_dict = new_state_dict
-    for k in state_dict.keys():
-        print(" -", k)
+    model.load_state_dict(state_dict)
+    return model
 
 class DepthFinetuneDataset(torch.utils.data.Dataset):
     def __init__(self, root, transform=None, target_size=(192, 256), split_ratio=0.8, subset='train'):
@@ -151,6 +153,8 @@ def evaluate_on_dataset(model, data_loader, device, min_depth=1e-3, max_depth=1.
 
 def main():
     parser = argparse.ArgumentParser()
+    parser.add_argument('-c', '--config_file', default=None, help='config file.')
+    parser.add_argument('--pretrained_model', type=str, default=None, help='pretrained model path.')
     parser.add_argument('--local_rank', type=int, default=0)
     parser.add_argument('--batch_size', type=int, default=8)
     parser.add_argument('--save_path', type=str, default='./checkpoints')
@@ -159,6 +163,24 @@ def main():
     parser.add_argument('--dataset_root', type=str, required=True)
     parser.add_argument('--start_epoch', type=int, default=None)
     args = parser.parse_args()
+
+    if not os.path.exists(args.config_file):
+        raise ValueError('config file not found.')
+    with open(args.config_file, 'r') as f:
+        cfg = yaml.safe_load(f)
+    cfg['img_hw'] = (cfg['img_hw'][0], cfg['img_hw'][1])
+    cfg['model_dir'] = args.result_dir
+
+    # copy attr into cfg
+    for attr in dir(args):
+        if attr[:2] != '__':
+            cfg[attr] = getattr(args, attr)
+    class pObject(object):
+        def __init__(self):
+            pass
+    cfg_new = pObject()
+    for attr in list(cfg.keys()):
+        setattr(cfg_new, attr, cfg[attr])
 
     dist.init_process_group("nccl")
     rank = dist.get_rank()
@@ -198,8 +220,14 @@ def main():
         with open(log_path, 'w') as f:
             f.write("Epoch,abs_rel,sq_rel,rms,log_rms,a1,a2,a3\n")
 
+    model = Model_depth_pose(cfg_new)
+    model = load_model(args.pretrained_model, model)
     model = model.to(device)
     model = DDP(model, device_ids=[args.local_rank])
+    for name, param in model.named_parameters():
+        print(name)
+    raise ValueError("stop")
+
     optimizer = torch.optim.AdamW(
         [p for p in model.parameters() if p.requires_grad],
         lr=1e-4,

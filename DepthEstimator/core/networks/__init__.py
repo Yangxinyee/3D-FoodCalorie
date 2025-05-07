@@ -12,7 +12,5 @@ def get_model(mode):
         return Model_triangulate_pose
     elif mode == 'depth' or mode == 'depth_pose':
         return Model_depth_pose
-#    elif mode == 'flowposenet':
-#        return Model_flowposenet
     else:
         raise ValueError('Mode {} not found.'.format(mode))
