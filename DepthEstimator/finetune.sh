@@ -13,7 +13,7 @@ torchrun \
   --nproc_per_node=2 \
   --master_port=29500 \
   finetune.py \
-  --batch_size 8 \
+  --batch_size 128 \
   --num_epochs 30 \
   --dataset_root /home/dataset/nutrition5k_dataset/imagery/realsense_overhead \
   --save_path /home/checkpoints/Nutrition5K_depth \
