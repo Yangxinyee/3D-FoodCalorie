@@ -25,6 +25,7 @@ python -c "import torch; print('PyTorch version:', torch.__version__); print('CU
 #   --dataset_root /home/dataset/FoodSeg103 \
 #   --save_path /home/checkpoints/MaskRCNN \
 
+export CUDA_VISIBLE_DEVICES=0,1
 torchrun \
   --nproc_per_node=2 \
   --master_port=29500 \
