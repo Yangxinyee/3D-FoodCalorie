@@ -276,6 +276,6 @@ def main():
             print(f"[INFO] Checkpoint saved after epoch {epoch+1}")
 
 if __name__ == "__main__":
-    load_model("/home/checkpoints/NYU/depth/best.pth", None)
+    main()
 
 
