@@ -30,8 +30,8 @@ def load_model(path, model):
     state_dict = data['model_state_dict']
     new_state_dict = OrderedDict()
     for k, v in state_dict.items():
-        if not k.startswith('module.'):
-            new_state_dict['module.' + k] = v
+        if k.startswith('module.'):
+            new_state_dict[k[7:]] = v
         else:
             new_state_dict[k] = v
     state_dict = new_state_dict
