@@ -7,7 +7,7 @@ export CUDA_VISIBLE_DEVICES=0,1
 
 nvidia-smi
 
-cd /home/zhd/3D-FoodCalorie/FoodSeg
+cd /home/zhd/3D-FoodCalorie/DepthEstimator
 
 torchrun \
   --nproc_per_node=2 \
