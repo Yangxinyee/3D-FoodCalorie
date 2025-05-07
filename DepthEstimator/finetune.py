@@ -120,7 +120,7 @@ def finetune_one_epoch(model, data_loader, optimizer, device, epoch, max_depth=1
 
         optimizer.zero_grad()
 
-        pred_disp = model(rgb)               
+        pred_disp = model.infer_depth(rgb)               
         pred_depth = 1.0 / (pred_disp + 1e-6)
 
         mask = (gt_depth_raw > min_depth) & (gt_depth_raw < max_depth)
