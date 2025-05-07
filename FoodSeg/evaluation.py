@@ -104,7 +104,9 @@ def get_model_instance_segmentation(num_classes, checkpoint_path=None):
 
     if checkpoint_path is not None and os.path.isfile(checkpoint_path):
         print(f"[INFO] Loading checkpoint from {checkpoint_path}")
-        model.load_state_dict(torch.load(checkpoint_path, map_location="cpu"))
+        data = torch.load(checkpoint_path, map_location="cpu")
+        print("model data: ", data)
+        model.load_state_dict(data['model_state_dict'])
     else:
         print("[WARN] Checkpoint not found, using randomly initialized model.")
 
