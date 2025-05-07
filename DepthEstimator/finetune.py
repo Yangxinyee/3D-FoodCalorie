@@ -168,7 +168,6 @@ def main():
     with open(args.config_file, 'r') as f:
         cfg = yaml.safe_load(f)
     cfg['img_hw'] = (cfg['img_hw'][0], cfg['img_hw'][1])
-    cfg['model_dir'] = args.result_dir
 
     # copy attr into cfg
     for attr in dir(args):
