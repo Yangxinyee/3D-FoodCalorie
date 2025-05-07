@@ -151,7 +151,7 @@ def evaluate_on_dataset(model, data_loader, device, min_depth=1e-3, max_depth=1.
             rgb = rgb.to(device)
             gt_depth = gt_depth.squeeze(1).cpu().numpy()  # [B, H, W]
 
-            pred_disp = model.module.infer_depth(rgb)        
+            pred_disp = model.infer_depth(rgb)        
             pred_depth = 1.0 / (pred_disp + 1e-6)
             pred_depth = torch.clamp(pred_depth, min=min_depth, max=max_depth)
             pred_depth = pred_depth.squeeze(1).cpu().numpy()
