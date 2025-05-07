@@ -324,14 +324,17 @@ def main():
     parser.add_argument('--num_epochs', type=int, default=30)
     parser.add_argument('--dataset_root', type=str, default='../FoodSeg103')
     parser.add_argument('--start_epoch', type=int, default=None)
-    # args = parser.parse_args()
-    args, _ = parser.parse_known_args(sys.argv[1:])
-    print(f"[DEBUG] CUDA_VISIBLE_DEVICES={os.environ.get('CUDA_VISIBLE_DEVICES')}, local_rank={args.local_rank}, device_id={torch.cuda.current_device()}")
+    args = parser.parse_args()
+    # print(f"[DEBUG] CUDA_VISIBLE_DEVICES={os.environ.get('CUDA_VISIBLE_DEVICES')}, local_rank={args.local_rank}, device_id={torch.cuda.current_device()}")
 
 
-    dist.init_process_group(backend='nccl')
-    torch.cuda.set_device(args.local_rank)
-    device = torch.device("cuda", args.local_rank)
+    # dist.init_process_group(backend='nccl')
+    # torch.cuda.set_device(args.local_rank)
+    # device = torch.device("cuda", args.local_rank)
+    dist.init_process_group("nccl")
+    rank, world_size = dist.get_rank(), dist.get_world_size()
+    device_id = rank % torch.cuda.device_count()
+    device = torch.device(device_id)
 
     os.makedirs(args.save_path, exist_ok=True)
     log_file_path = os.path.join(args.save_path, "eval_log.txt")
