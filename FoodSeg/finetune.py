@@ -272,7 +272,11 @@ def main():
         progress_bar = tqdm(data_loader, desc=f"[Training] Epoch {epoch+1}")
 
         for _, (images, targets) in enumerate(progress_bar):
-            print(images.shape)
+            print(f"Batch size: {len(images)}")
+            for i, img in enumerate(images):
+                print(f"Image {i} shape: {img.shape}")
+                if img.shape[0] != 3:
+                    raise ValueError("Bad image shape")
             images = [img.to(device) for img in images]
             targets = [{k: v.to(device) for k, v in t.items()} for t in targets]
 
