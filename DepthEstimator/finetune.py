@@ -23,9 +23,11 @@ def collate_fn(batch):
     return imgs, depths
 
 def get_transform():
-    transforms = []
-    transforms.append(T.ToTensor())
-    return T.Compose(transforms)
+    return T.Compose([
+        T.ToTensor(),
+        T.Normalize(mean=[0.485, 0.456, 0.406], 
+                    std=[0.229, 0.224, 0.225])
+    ])
 
 def load_model(path, model):
     data = torch.load(path)
@@ -37,7 +39,10 @@ def load_model(path, model):
         else:
             new_state_dict[k] = v
     state_dict = new_state_dict
-    model.load_state_dict(state_dict)
+    try:
+        model.load_state_dict(state_dict)
+    except RuntimeError as e:
+        raise RuntimeError(f"Failed to load weights: {e}")
     return model
 
 class DepthFinetuneDataset(torch.utils.data.Dataset):
@@ -215,12 +220,6 @@ def main():
         collate_fn=collate_fn
     )
 
-    log_path = os.path.join(args.save_path, 'eval_log.txt')
-
-    if rank == 0 and args.start_epoch is None:
-        with open(log_path, 'w') as f:
-            f.write("Epoch,abs_rel,sq_rel,rms,log_rms,a1,a2,a3\n")
-
     model = Model_depth_pose(cfg_new)
     model = load_model(args.pretrained_model, model)
     model = model.to(device)
@@ -260,6 +259,11 @@ def main():
         start_epoch = 0
     else:
         start_epoch = args.start_epoch
+
+    log_path = os.path.join(args.save_path, 'eval_log.txt')
+    if rank == 0 and start_epoch == 0:
+        with open(log_path, 'w') as f:
+            f.write("Epoch,abs_rel,sq_rel,rms,log_rms,a1,a2,a3\n")
 
     for epoch in range(start_epoch, args.num_epochs):
         sampler.set_epoch(epoch)
