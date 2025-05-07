@@ -7,9 +7,12 @@ import torchvision.transforms as T
 import torch.nn.functional as F
 from PIL import Image
 from tqdm import tqdm
+from collections import OrderedDict
 from torch.nn.parallel import DistributedDataParallel as DDP
 from torch.utils.data import DataLoader, DistributedSampler
 from core.evaluation.evaluate_depth import eval_depth
+
+seed = 42
 
 def collate_fn(batch):
     imgs, depths = zip(*batch)
@@ -22,6 +25,19 @@ def get_transform():
     transforms.append(T.ToTensor())
     return T.Compose(transforms)
 
+def load_model(path, model):
+    data = torch.load(path)
+    state_dict = data['model_state_dict']
+    new_state_dict = OrderedDict()
+    for k, v in state_dict.items():
+        if not k.startswith('module.'):
+            new_state_dict['module.' + k] = v
+        else:
+            new_state_dict[k] = v
+    state_dict = new_state_dict
+    for k in state_dict.keys():
+        print(" -", k)
+
 class DepthFinetuneDataset(torch.utils.data.Dataset):
     def __init__(self, root, transform=None, target_size=(192, 256), split_ratio=0.8, subset='train'):
         self.root = root
@@ -30,7 +46,7 @@ class DepthFinetuneDataset(torch.utils.data.Dataset):
         self.target_size = target_size  # (H, W)
 
         all_samples = sorted([os.path.join(root, d) for d in os.listdir(root) if os.path.isdir(os.path.join(root, d))])
-        np.random.seed(42)
+        np.random.seed(seed)
         np.random.shuffle(all_samples)
 
         split_index = int(len(all_samples) * split_ratio)
