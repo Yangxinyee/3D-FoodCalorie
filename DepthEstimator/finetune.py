@@ -235,7 +235,6 @@ def main():
         elif args.encoder_decoder == 2:
             if not name.startswith("module.depth_net.decoder"):
                 param.requires_grad = False
-            pass
         else:
             raise ValueError(f"Invalid encoder_decoder value: {args.encoder_decoder}")
         
