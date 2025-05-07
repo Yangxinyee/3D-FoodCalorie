@@ -198,6 +198,8 @@ def main():
     parser.add_argument('--save_path', type=str, default='./checkpoints', help='Path to save checkpoints and logs')
     parser.add_argument('--resume', action='store_true', help='Resume training from the last checkpoint')
     parser.add_argument('--num_epochs', type=int, default=30, help='Total number of training epochs')
+    parser.add_argument('--dataset_root', type=str, default='../FoodSeg103', help='Path to the FoodSeg103 dataset root')
+
 
 
     args = parser.parse_args()
@@ -209,7 +211,7 @@ def main():
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
     print(f"[INFO] Using device: {device}")
 
-    dataset_root = "../FoodSeg103"
+    dataset_root = args.dataset_root
     num_classes = 104  # 103 classes + background
 
     dataset = FoodSeg103Dataset(dataset_root, subset="train", transforms=get_transform())
