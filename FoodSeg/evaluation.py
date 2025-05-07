@@ -10,7 +10,7 @@ from torchvision.models.detection.mask_rcnn import MaskRCNNPredictor
 import torchvision.transforms as T
 from tqdm import tqdm
 
-CHECKPOINT_PATH = "mrcnn_foodseg103.pth"
+CHECKPOINT_PATH = "/home/checkpoints/mrcnn_foodseg103_14.pth"
 
 class FoodSeg103Dataset(torch.utils.data.Dataset):
     def __init__(self, root, subset="train", transforms=None):
@@ -190,7 +190,7 @@ def evaluate(model, data_loader, device, iou_thresholds=[0.5, 0.75]):
     return mean_aps, mean_ious
 
 def main():
-    dataset_root = "../FoodSeg103"
+    dataset_root = "/home/dataset/FoodSeg103"
     num_classes = 104  # 103 classes + background
     device = torch.device('cuda') if torch.cuda.is_available() else torch.device('cpu')
     print(f"[INFO] Using device: {device}")
