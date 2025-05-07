@@ -86,9 +86,6 @@ class FoodSeg103Dataset(torch.utils.data.Dataset):
 
         if self.transforms is not None:
             img = self.transforms(img)
-            print(img.shape)
-            if img.ndim != 3 or img.shape[0] != 3:
-                raise ValueError(f"[BAD IMAGE] {img_path} has shape {img.shape} after transform")
 
         return img, target
 
@@ -275,6 +272,7 @@ def main():
         progress_bar = tqdm(data_loader, desc=f"[Training] Epoch {epoch+1}")
 
         for _, (images, targets) in enumerate(progress_bar):
+            print(images.shape)
             images = [img.to(device) for img in images]
             targets = [{k: v.to(device) for k, v in t.items()} for t in targets]
 
