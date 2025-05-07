@@ -1,0 +1,234 @@
+import os
+import numpy as np
+import argparse
+import torch
+import torch.distributed as dist
+import torchvision.transforms as T
+import torch.nn.functional as F
+from PIL import Image
+from tqdm import tqdm
+from torch.nn.parallel import DistributedDataParallel as DDP
+from torch.utils.data import DataLoader, DistributedSampler
+from core.evaluation.evaluate_depth import eval_depth
+
+def collate_fn(batch):
+    imgs, depths = zip(*batch)
+    imgs = torch.stack(imgs, dim=0)
+    depths = torch.stack(depths, dim=0)
+    return imgs, depths
+
+def get_transform():
+    transforms = []
+    transforms.append(T.ToTensor())
+    return T.Compose(transforms)
+
+class DepthFinetuneDataset(torch.utils.data.Dataset):
+    def __init__(self, root, transform=None, target_size=(192, 256), split_ratio=0.8, subset='train'):
+        self.root = root
+        self.sample_dirs = [os.path.join(root, d) for d in os.listdir(root) if os.path.isdir(os.path.join(root, d))]
+        self.transform = transform
+        self.target_size = target_size  # (H, W)
+
+        all_samples = sorted([os.path.join(root, d) for d in os.listdir(root) if os.path.isdir(os.path.join(root, d))])
+        np.random.seed(42)
+        np.random.shuffle(all_samples)
+
+        split_index = int(len(all_samples) * split_ratio)
+        if subset == 'train':
+            self.sample_dirs = all_samples[:split_index]
+        elif subset == 'test':
+            self.sample_dirs = all_samples[split_index:]
+        else:
+            raise ValueError(f"subset should be 'train' or 'test', got {subset}")
+
+    def __len__(self):
+        return len(self.sample_dirs)
+
+    def __getitem__(self, idx):
+        sample_dir = self.sample_dirs[idx]
+        rgb_path = os.path.join(sample_dir, 'rgb.png')
+        depth_path = os.path.join(sample_dir, 'depth_raw.png')
+
+        # Load images
+        rgb = Image.open(rgb_path).convert('RGB')
+        depth = Image.open(depth_path)
+
+        # Resize
+        rgb = rgb.resize((self.target_size[1], self.target_size[0]), Image.BILINEAR)
+        depth = depth.resize((self.target_size[1], self.target_size[0]), Image.NEAREST)
+
+        # To tensor
+        depth_np = np.array(depth).astype(np.float32) * 1e-4  # convert mm to meters if needed
+        depth_tensor = torch.from_numpy(depth_np).unsqueeze(0)  # [1, H, W]
+
+        if self.transform:
+            rgb_tensor = self.transform(rgb)
+        else:
+            rgb_tensor = T.ToTensor()(rgb)
+
+        return rgb_tensor, depth_tensor
+    
+def silog_loss(pred, target, mask=None, variance_focus=0.85):
+    """
+    Scale-Invariant Logarithmic Loss (SILog), suitable for depth regression.
+    Reference: Eigen et al. 2014
+    """
+    eps = 1e-6
+    if mask is not None:
+        pred, target = pred[mask], target[mask]
+
+    g = torch.log(pred + eps) - torch.log(target + eps)
+    d = torch.var(g) + variance_focus * (torch.mean(g) ** 2)
+    return d * 10.0
+
+def finetune_one_epoch(model, data_loader, optimizer, device, epoch, max_depth=1.2, min_depth=1e-3):
+    model.train()
+    epoch_loss = 0.0
+
+    rank = dist.get_rank()
+    if rank == 0:
+        pbar = tqdm(enumerate(data_loader), total=len(data_loader), desc=f"[Train] Epoch {epoch+1}")
+    else:
+        pbar = enumerate(data_loader)
+
+    for i, (rgb, gt_depth) in pbar:
+        rgb = rgb.to(device, non_blocking=True)            # [B, 3, H, W]
+        gt_depth_raw = gt_depth.to(device, non_blocking=True) # [B, 1, H, W]
+
+        optimizer.zero_grad()
+
+        pred_disp = model(rgb)               
+        pred_depth = 1.0 / (pred_disp + 1e-6)
+
+        mask = (gt_depth_raw > min_depth) & (gt_depth_raw < max_depth)
+        pred_depth = torch.clamp(pred_depth, min=min_depth, max=max_depth)
+        gt_depth = torch.clamp(gt_depth_raw, min=min_depth, max=max_depth)
+
+        loss = silog_loss(pred_depth, gt_depth, mask)
+        loss.backward()
+        optimizer.step()
+
+        epoch_loss += loss.item()
+
+        if rank == 0:
+            pbar.set_postfix(loss=loss.item())
+
+    return epoch_loss / len(data_loader)
+
+def evaluate_on_dataset(model, data_loader, device, min_depth=1e-3, max_depth=1.2):
+    model.eval()
+    pred_depths, gt_depths = [], []
+
+    with torch.no_grad():
+        for rgb, gt_depth in data_loader:
+            rgb = rgb.to(device)
+            gt_depth = gt_depth.squeeze(1).cpu().numpy()  # [B, H, W]
+
+            pred_disp = model(rgb)
+            pred_depth = 1.0 / (pred_disp + 1e-6)
+            pred_depth = torch.clamp(pred_depth, min=min_depth, max=max_depth)
+            pred_depth = pred_depth.squeeze(1).cpu().numpy()
+
+            gt_depths.extend(gt_depth)
+            pred_depths.extend(pred_depth)
+    return eval_depth(gt_depths, pred_depths, min_depth=min_depth, max_depth=max_depth, nyu=False)
+
+def main():
+    parser = argparse.ArgumentParser()
+    parser.add_argument('--local_rank', type=int, default=0)
+    parser.add_argument('--batch_size', type=int, default=8)
+    parser.add_argument('--save_path', type=str, default='./checkpoints')
+    parser.add_argument('--resume', action='store_true')
+    parser.add_argument('--num_epochs', type=int, default=30)
+    parser.add_argument('--dataset_root', type=str, required=True)
+    parser.add_argument('--start_epoch', type=int, default=None)
+    args = parser.parse_args()
+
+    dist.init_process_group("nccl")
+    rank = dist.get_rank()
+    world_size = dist.get_world_size()
+    torch.cuda.set_device(args.local_rank)
+    device = torch.device(f"cuda:{args.local_rank}")
+
+    os.makedirs(args.save_path, exist_ok=True)
+
+    dataset = DepthFinetuneDataset(args.dataset_root, transform=get_transform(), split_ratio=0.8, subset='train')
+    sampler = DistributedSampler(dataset, num_replicas=world_size, rank=rank, shuffle=True)
+
+    dataset_test = DepthFinetuneDataset(args.dataset_root, transform=get_transform(), split_ratio=0.8, subset='test')
+    sampler_test = DistributedSampler(dataset_test, num_replicas=world_size, rank=rank, shuffle=False)
+
+    data_loader = DataLoader(
+        dataset,
+        batch_size=args.batch_size,
+        sampler=sampler,
+        num_workers=4,
+        pin_memory=True,
+        collate_fn=collate_fn
+    )
+
+    data_loader_test = DataLoader(
+        dataset_test,
+        batch_size=args.batch_size,
+        sampler=sampler_test,
+        num_workers=4,
+        pin_memory=True,
+        collate_fn=collate_fn
+    )
+
+    log_path = os.path.join(args.save_path, 'eval_log.txt')
+
+    if rank == 0 and args.start_epoch is None:
+        with open(log_path, 'w') as f:
+            f.write("Epoch,abs_rel,sq_rel,rms,log_rms,a1,a2,a3\n")
+
+    model = model.to(device)
+    model = DDP(model, device_ids=[args.local_rank])
+    optimizer = torch.optim.AdamW(
+        [p for p in model.parameters() if p.requires_grad],
+        lr=1e-4,
+        weight_decay=1e-2
+    )
+    lr_scheduler = torch.optim.lr_scheduler.StepLR(optimizer, step_size=5, gamma=0.5)
+
+    # Resume
+    last_ckpt = os.path.join(args.save_path, 'last.pth')
+    if args.resume and os.path.exists(last_ckpt):
+        checkpoint = torch.load(last_ckpt, map_location=device)
+        model.load_state_dict(checkpoint['model'])
+        optimizer.load_state_dict(checkpoint['optimizer'])
+        lr_scheduler.load_state_dict(checkpoint['lr_scheduler'])
+        args.start_epoch = checkpoint['epoch'] + 1
+        if rank == 0:
+            print(f"[INFO] Resumed from checkpoint at epoch {checkpoint['epoch']}")
+
+    if args.start_epoch is None:
+        start_epoch = 0
+    else:
+        start_epoch = args.start_epoch
+
+    for epoch in range(start_epoch, args.num_epochs):
+        sampler.set_epoch(epoch)
+        epoch_loss = finetune_one_epoch(model, data_loader, optimizer, device, epoch)
+        lr_scheduler.step()
+
+        if rank == 0:
+            print(f"[Epoch {epoch+1}] Average Training Loss: {epoch_loss:.4f}")
+
+            eval_metrics = evaluate_on_dataset(model.module, data_loader_test, device)
+            abs_rel, sq_rel, rms, log_rms, a1, a2, a3 = eval_metrics
+            with open(log_path, 'a') as f:
+                f.write(f"{epoch+1},{abs_rel:.4f},{sq_rel:.4f},{rms:.4f},{log_rms:.4f},{a1:.4f},{a2:.4f},{a3:.4f}\n")
+
+            save_dict = {
+                'epoch': epoch,
+                'model': model.module.state_dict(),
+                'optimizer': optimizer.state_dict(),
+                'lr_scheduler': lr_scheduler.state_dict()
+            }
+
+            torch.save(save_dict, os.path.join(args.save_path, f'depth_epoch_{epoch}.pth'))
+            torch.save(save_dict, last_ckpt)
+            print(f"[INFO] Checkpoint saved after epoch {epoch+1}")
+
+
