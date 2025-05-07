@@ -159,6 +159,7 @@ def main():
     parser.add_argument('--save_path', type=str, default='./checkpoints')
     parser.add_argument('--resume', action='store_true')
     parser.add_argument('--num_epochs', type=int, default=30)
+    parser.add_argument('--mode', type=str, default='depth', help='training mode.')
     parser.add_argument('--dataset_root', type=str, required=True)
     parser.add_argument('--start_epoch', type=int, default=None)
     args = parser.parse_args()
