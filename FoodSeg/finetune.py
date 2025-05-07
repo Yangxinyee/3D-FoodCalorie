@@ -86,6 +86,7 @@ class FoodSeg103Dataset(torch.utils.data.Dataset):
 
         if self.transforms is not None:
             img = self.transforms(img)
+            print(img.shape)
             if img.ndim != 3 or img.shape[0] != 3:
                 raise ValueError(f"[BAD IMAGE] {img_path} has shape {img.shape} after transform")
 
