@@ -7,24 +7,19 @@ set -e
 source $(conda info --base)/etc/profile.d/conda.sh
 conda activate food37
 
-# Check GPU status
+# 显式绑定你想用的GPU（非常关键！）
+export CUDA_VISIBLE_DEVICES=0,1
+
+# 查看GPU状态
 nvidia-smi
 
-# Navigate to your project directory
+# 进入代码目录
 cd /home/3D-FoodCalorie/FoodSeg
 
-# Check PyTorch and CUDA details
+# 检查PyTorch环境
 python -c "import torch; print('PyTorch version:', torch.__version__); print('CUDA available:', torch.cuda.is_available()); print('CUDA version:', torch.version.cuda if torch.cuda.is_available() else 'NA'); print('GPU count:', torch.cuda.device_count()); print('GPU name:', torch.cuda.get_device_name(0) if torch.cuda.device_count() > 0 else 'NA')"
 
-# Run training script
-# python finetune.py \
-#   --gpus 0 \
-#   --batch_size 16 \
-#   --num_epochs 30 \
-#   --dataset_root /home/dataset/FoodSeg103 \
-#   --save_path /home/checkpoints/MaskRCNN \
-
-export CUDA_VISIBLE_DEVICES=0,1
+# 运行训练（使用rank 0和1对应的两个设备）
 torchrun \
   --nproc_per_node=2 \
   --master_port=29500 \

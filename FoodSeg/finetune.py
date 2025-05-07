@@ -14,8 +14,6 @@ from torch.utils.data import DataLoader, DistributedSampler
 import torchvision.transforms as T
 from tqdm import tqdm
 
-CHECKPOINT_PATH = "mrcnn_foodseg103.pth"
-
 class FoodSeg103Dataset(torch.utils.data.Dataset):
     def __init__(self, root, subset="train", transforms=None):
         self.root = root
@@ -326,6 +324,8 @@ def main():
     parser.add_argument('--dataset_root', type=str, default='../FoodSeg103')
     parser.add_argument('--start_epoch', type=int, default=None)
     args = parser.parse_args()
+    print(f"[DEBUG] CUDA_VISIBLE_DEVICES={os.environ.get('CUDA_VISIBLE_DEVICES')}, local_rank={args.local_rank}, device_id={torch.cuda.current_device()}")
+
 
     dist.init_process_group(backend='nccl')
     torch.cuda.set_device(args.local_rank)
