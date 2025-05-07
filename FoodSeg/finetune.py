@@ -325,20 +325,19 @@ def main():
     parser.add_argument('--dataset_root', type=str, default='../FoodSeg103')
     parser.add_argument('--start_epoch', type=int, default=None)
     args = parser.parse_args()
-    # print(f"[DEBUG] CUDA_VISIBLE_DEVICES={os.environ.get('CUDA_VISIBLE_DEVICES')}, local_rank={args.local_rank}, device_id={torch.cuda.current_device()}")
 
-
-    # dist.init_process_group(backend='nccl')
-    # torch.cuda.set_device(args.local_rank)
-    # device = torch.device("cuda", args.local_rank)
+    # DDP setup
     dist.init_process_group("nccl")
-    rank, world_size = dist.get_rank(), dist.get_world_size()
+    rank = dist.get_rank()
+    world_size = dist.get_world_size()
     device_id = rank % torch.cuda.device_count()
-    device = torch.device(device_id)
+    device = torch.device(f"cuda:{device_id}")
+    torch.cuda.set_device(device)
 
     os.makedirs(args.save_path, exist_ok=True)
     log_file_path = os.path.join(args.save_path, "eval_log.txt")
 
+    # Datasets & Loaders
     dataset = FoodSeg103Dataset(args.dataset_root, subset="train", transforms=get_transform())
     dataset_test = FoodSeg103Dataset(args.dataset_root, subset="test", transforms=get_transform())
 
@@ -350,13 +349,16 @@ def main():
     data_loader_test = DataLoader(dataset_test, batch_size=args.batch_size, sampler=test_sampler,
                                   num_workers=4, collate_fn=collate_fn, pin_memory=True)
 
+    # Model
     model = get_model_instance_segmentation(num_classes=104).to(device)
     model = DDP(model, device_ids=[device_id])
 
+    # Optimizer & LR Scheduler
     optimizer = torch.optim.SGD([p for p in model.parameters() if p.requires_grad],
                                 lr=0.005, momentum=0.9, weight_decay=0.0005)
     lr_scheduler = torch.optim.lr_scheduler.StepLR(optimizer, step_size=5, gamma=0.1)
 
+    # Checkpoint
     last_path = os.path.join(args.save_path, "last.pth")
     start_epoch = 0
     if args.resume and os.path.exists(last_path):
@@ -369,16 +371,23 @@ def main():
     if args.start_epoch is not None:
         start_epoch = args.start_epoch
 
-    if args.local_rank == 0 and not args.resume:
+    if rank == 0 and not args.resume:
         with open(log_file_path, "w") as f:
             f.write("Epoch,Mean_IoU,IoU_Threshold,AP\n")
 
+    # Train loop
     for epoch in range(start_epoch, args.num_epochs):
         train_sampler.set_epoch(epoch)
         model.train()
         epoch_loss = 0.0
 
-        for images, targets in data_loader:
+        # tqdm only on rank 0
+        if rank == 0:
+            pbar = tqdm(enumerate(data_loader), total=len(data_loader), desc=f"[Training] Epoch {epoch+1}")
+        else:
+            pbar = enumerate(data_loader)
+
+        for _, (images, targets) in pbar:
             images = [img.to(device, non_blocking=True) for img in images]
             targets = [{k: v.to(device, non_blocking=True) for k, v in t.items()} for t in targets]
 
@@ -390,11 +399,16 @@ def main():
             optimizer.step()
             epoch_loss += losses.item()
 
+            if rank == 0:
+                pbar.set_postfix(loss=losses.item())
+
         lr_scheduler.step()
 
-        if args.local_rank == 0:
+        # Eval & save only on rank 0
+        if rank == 0:
             print(f"[Epoch {epoch+1}] Loss: {epoch_loss:.4f}")
             mean_aps, mean_iou = evaluate(model.module, data_loader_test, device)
+
             with open(log_file_path, "a") as f:
                 for iou_thresh, ap in mean_aps.items():
                     f.write(f"{epoch},{mean_iou:.4f},{iou_thresh:.2f},{ap:.4f}\n")
@@ -408,6 +422,7 @@ def main():
             torch.save(save_dict, os.path.join(args.save_path, f"mrcnn_foodseg103_{epoch}.pth"))
             torch.save(save_dict, last_path)
             print(f"[INFO] Checkpoint saved after epoch {epoch+1}")
+
 
 if __name__ == "__main__":
     main()
