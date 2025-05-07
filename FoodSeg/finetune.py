@@ -199,8 +199,7 @@ def main():
     parser.add_argument('--resume', action='store_true', help='Resume training from the last checkpoint')
     parser.add_argument('--num_epochs', type=int, default=30, help='Total number of training epochs')
     parser.add_argument('--dataset_root', type=str, default='../FoodSeg103', help='Path to the FoodSeg103 dataset root')
-
-
+    parser.add_argument('--start_epoch', type=int, default=None, help='Start epoch for training')
 
     args = parser.parse_args()
 
