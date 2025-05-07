@@ -7,18 +7,23 @@ from torchvision.models.detection.faster_rcnn import FastRCNNPredictor
 from torchvision.models.detection.mask_rcnn import MaskRCNNPredictor
 import torchvision.transforms as T
 from PIL import Image
-from diffusers import StableDiffusionInpaintPipeline
+import argparse
 
 # -------- CONFIG --------
-MODEL_PATH = "mrcnn_foodseg103.pth"
 NUM_CLASSES = 104  # 103 food classes + background
 DEVICE = torch.device("cuda" if torch.cuda.is_available() else "cpu")
-INPUT_DIR = "../dataset/nutrition5k_dataset/imagery/realsense_overhead"
-OUTPUT_DIR = "../dataset/nutrition5k_dataset/imagery/mrcnn_output"
-CATEGORY_PATH = "../dataset/FoodSeg103/category_id.txt"
+
+# -------- ARGPARSE SETUP --------
+def parse_args():
+    parser = argparse.ArgumentParser(description="Run Mask R-CNN food segmentation.")
+    parser.add_argument("--model_path", type=str, required=True, help="Path to trained model")
+    parser.add_argument("--input_dir", type=str, required=True, help="Directory with input dish folders")
+    parser.add_argument("--output_dir", type=str, required=True, help="Directory to save output masks")
+    parser.add_argument("--category_path", type=str, required=True, help="Path to class category file")
+    return parser.parse_args()
 
 # -------- MODEL SETUP --------
-def get_model():
+def get_model(model_path):
     model = maskrcnn_resnet50_fpn(weights=None)
     in_features = model.roi_heads.box_predictor.cls_score.in_features
     model.roi_heads.box_predictor = FastRCNNPredictor(in_features, NUM_CLASSES)
@@ -27,7 +32,7 @@ def get_model():
     hidden_layer = 512
     model.roi_heads.mask_predictor = MaskRCNNPredictor(in_features_mask, hidden_layer, NUM_CLASSES)
 
-    model.load_state_dict(torch.load(MODEL_PATH, map_location=DEVICE))
+    model.load_state_dict(torch.load(model_path, map_location=DEVICE))
     model.to(DEVICE)
     model.eval()
     return model
@@ -41,29 +46,20 @@ def load_class_names(category_file):
             class_names.append(name)
     return class_names
 
-CLASS_NAMES = load_class_names(CATEGORY_PATH)
-
 # -------- DRAW PREDICTIONS --------
-def draw_instance_predictions(img, boxes, masks, labels, scores, score_thresh=0.5):
+def draw_instance_predictions(img, masks, labels, class_names, score_thresh=0.5):
     for i in range(len(masks)):
-        if scores[i] < score_thresh:
-            continue
-
         mask = masks[i]
         color = np.random.randint(0, 255, (3,), dtype=np.uint8)
         color_mask = np.stack([mask * color[j] for j in range(3)], axis=-1)
         img = np.where(mask[:, :, None], img * 0.5 + color_mask * 0.5, img)
 
-        # Compute center of mass of mask to place the label
         coords = np.column_stack(np.where(mask))
         if coords.shape[0] == 0:
-            continue  # Skip empty masks
+            continue
         y_center, x_center = coords.mean(axis=0).astype(int)
 
-        # Prepare label text
-        label = CLASS_NAMES[labels[i]] if labels[i] < len(CLASS_NAMES) else str(labels[i])
-
-        # Draw label inside the mask
+        label = class_names[labels[i]] if labels[i] < len(class_names) else str(labels[i])
         cv2.putText(
             img, label, (x_center, y_center),
             cv2.FONT_HERSHEY_SIMPLEX, 0.4, (0, 0, 0), thickness=1, lineType=cv2.LINE_AA
@@ -72,8 +68,9 @@ def draw_instance_predictions(img, boxes, masks, labels, scores, score_thresh=0.
     return img.astype(np.uint8)
 
 # -------- MAIN FUNCTION --------
-def process_directory(input_dir, output_dir):
-    model = get_model()
+def process_directory(input_dir, output_dir, model_path, category_path):
+    model = get_model(model_path)
+    class_names = load_class_names(category_path)
     os.makedirs(output_dir, exist_ok=True)
 
     for dish_folder in os.listdir(input_dir):
@@ -84,7 +81,6 @@ def process_directory(input_dir, output_dir):
             print(f"[WARN] rgb.png not found in {dish_path}")
             continue
 
-        # Load and preprocess image
         image = Image.open(rgb_path).convert("RGB").resize((256, 192))
         orig = np.array(image)
 
@@ -95,15 +91,14 @@ def process_directory(input_dir, output_dir):
             output = model([img_tensor])[0]
 
         masks = output["masks"].squeeze(1).cpu().numpy() > 0.5
-        # boxes = output["boxes"].cpu().numpy()
         labels = output["labels"].cpu().numpy()
-        # scores = output["scores"].cpu().numpy()
 
-        result = draw_instance_predictions(orig.copy(), masks, labels)
+        result = draw_instance_predictions(orig.copy(), masks, labels, class_names)
 
         output_path = os.path.join(output_dir, f"{dish_folder}_mask.png")
         cv2.imwrite(output_path, cv2.cvtColor(result, cv2.COLOR_RGB2BGR))
         print(f"[INFO] Saved mask to {output_path}")
 
 if __name__ == "__main__":
-    process_directory(INPUT_DIR, OUTPUT_DIR)
+    args = parse_args()
+    process_directory(args.input_dir, args.output_dir, args.model_path, args.category_path)
