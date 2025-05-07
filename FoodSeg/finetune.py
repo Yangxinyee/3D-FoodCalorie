@@ -28,6 +28,10 @@ class FoodSeg103Dataset(torch.utils.data.Dataset):
         mask_path = os.path.join(self.mask_dir, self.masks[idx])
         
         img = Image.open(img_path).convert("RGB")
+        print(f"[DEBUG] {img_path} mode: {img.mode}")
+        img = img.convert("RGB")
+        img_tensor = T.ToTensor()(img)
+        print(f"[DEBUG] tensor shape: {img_tensor.shape}")
         mask = Image.open(mask_path)
         # Resize both image and mask to 192x256 BEFORE any further processing
         resize_size = (256, 192)  # (width, height) as required by PIL
