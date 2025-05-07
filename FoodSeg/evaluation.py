@@ -196,7 +196,7 @@ def evaluate(model, data_loader, device, iou_thresholds=[0.5, 0.75]):
 def main():
     dataset_root = "/home/dataset/FoodSeg103"
     num_classes = 104  # 103 classes + background
-    checkpoint_path = "/home/checkpoints/mrcnn_foodseg103_14.pth"
+    checkpoint_path = "/home/checkpoints/MaskRCNN/mrcnn_foodseg103_14.pth"
 
     device = torch.device('cuda') if torch.cuda.is_available() else torch.device('cpu')
     print(f"[INFO] Using device: {device}")
