@@ -6,7 +6,7 @@ source $(conda info --base)/etc/profile.d/conda.sh
 conda activate food37
 
 # Set GPU visibility
-export CUDA_VISIBLE_DEVICES=0,1
+export CUDA_VISIBLE_DEVICES=0
 
 # Show GPU usage
 nvidia-smi
