@@ -3,11 +3,14 @@ import numpy as np
 import argparse
 import torch
 import torchvision
+import torch.distributed as dist
 from PIL import Image
 from torch.utils.data import DataLoader
 from torchvision.models.detection import maskrcnn_resnet50_fpn
 from torchvision.models.detection.faster_rcnn import FastRCNNPredictor
 from torchvision.models.detection.mask_rcnn import MaskRCNNPredictor
+from torch.nn.parallel import DistributedDataParallel as DDP
+from torch.utils.data import DataLoader, DistributedSampler
 import torchvision.transforms as T
 from tqdm import tqdm
 
@@ -192,126 +195,214 @@ def evaluate(model, data_loader, device, iou_thresholds=[0.5, 0.75]):
     return mean_aps, mean_ious
 
 
+# def main():
+#     parser = argparse.ArgumentParser()
+#     parser.add_argument('--gpus', type=str, default='0', help='Comma-separated GPU IDs to use, e.g. "0,1,2,3"')
+#     parser.add_argument('--batch_size', type=int, default=8, help='Batch size for training and evaluation')
+#     parser.add_argument('--save_path', type=str, default='./checkpoints', help='Path to save checkpoints and logs')
+#     parser.add_argument('--resume', action='store_true', help='Resume training from the last checkpoint')
+#     parser.add_argument('--num_epochs', type=int, default=30, help='Total number of training epochs')
+#     parser.add_argument('--dataset_root', type=str, default='../FoodSeg103', help='Path to the FoodSeg103 dataset root')
+#     parser.add_argument('--start_epoch', type=int, default=None, help='Start epoch for training')
+
+#     args = parser.parse_args()
+
+#     os.environ["CUDA_VISIBLE_DEVICES"] = args.gpus
+#     os.makedirs(args.save_path, exist_ok=True)
+#     log_file_path = os.path.join(args.save_path, "eval_log.txt")
+
+#     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+#     print(f"[INFO] Using device: {device}")
+
+#     dataset_root = args.dataset_root
+#     num_classes = 104  # 103 classes + background
+
+#     dataset = FoodSeg103Dataset(dataset_root, subset="train", transforms=get_transform())
+#     dataset_test = FoodSeg103Dataset(dataset_root, subset="test", transforms=get_transform())
+#     data_loader = DataLoader(dataset, batch_size=args.batch_size, shuffle=True, num_workers=4, collate_fn=collate_fn)
+#     data_loader_test = DataLoader(dataset_test, batch_size=args.batch_size, shuffle=False, num_workers=4, collate_fn=collate_fn)
+#     print("[INFO] DataLoader created: ", len(data_loader))
+
+#     model = get_model_instance_segmentation(num_classes)
+#     model.to(device)
+#     if torch.cuda.device_count() > 1:
+#         print(f"[INFO] Using {torch.cuda.device_count()} GPUs")
+#         model = torch.nn.DataParallel(model)
+#     else:
+#         print("[INFO] Using a single GPU")
+
+#     start_epoch = 0
+#     num_epochs = args.num_epochs
+
+#     last_path = os.path.join(args.save_path, "last.pth")
+#     params = [p for p in model.parameters() if p.requires_grad]
+#     optimizer = torch.optim.SGD(params, lr=0.005, momentum=0.9, weight_decay=0.0005)
+#     lr_scheduler = torch.optim.lr_scheduler.StepLR(optimizer, step_size=5, gamma=0.1)
+
+#     if args.resume and os.path.exists(last_path):
+#         print(f"[INFO] Resuming from checkpoint: {last_path}")
+#         checkpoint = torch.load(last_path, map_location=device)
+
+#         model_state = checkpoint.get('model', checkpoint)  # fallback for legacy format
+#         if isinstance(model, torch.nn.DataParallel):
+#             model.module.load_state_dict(model_state)
+#         else:
+#             model.load_state_dict(model_state)
+
+#         if 'optimizer' in checkpoint:
+#             optimizer.load_state_dict(checkpoint['optimizer'])
+#         if 'lr_scheduler' in checkpoint:
+#             lr_scheduler.load_state_dict(checkpoint['lr_scheduler'])
+
+#         if 'epoch' in checkpoint:
+#             start_epoch = checkpoint['epoch'] + 1
+#             print(f"[INFO] Resumed from epoch {checkpoint['epoch']}")
+
+#     if args.start_epoch is not None:
+#         print(f"[INFO] Overriding start_epoch with {args.start_epoch}")
+#         if args.start_epoch > num_epochs:
+#             raise ValueError(f"Start epoch {args.start_epoch} is greater than the total number of epochs {num_epochs}")
+#         start_epoch = args.start_epoch
+
+#     if not args.resume:
+#         with open(log_file_path, "w") as f:
+#             f.write("Epoch,Mean_IoU,IoU_Threshold,AP\n")
+
+#     for epoch in range(start_epoch, num_epochs):
+#         print(f"\n[INFO] Starting epoch {epoch+1}/{num_epochs}...")
+#         model.train()
+#         epoch_loss = 0
+#         progress_bar = tqdm(data_loader, desc=f"[Training] Epoch {epoch+1}")
+
+#         for _, (images, targets) in enumerate(progress_bar):
+#             images = [img.to(device) for img in images]
+#             targets = [{k: v.to(device) for k, v in t.items()} for t in targets]
+
+#             loss_dict = model(images, targets)
+#             losses = sum(loss for loss in loss_dict.values())
+#             epoch_loss += losses.item()
+
+#             optimizer.zero_grad()
+#             losses.backward()
+#             optimizer.step()
+
+#             losses.detach().cpu()
+#             progress_bar.set_postfix(loss=losses.item())
+
+#         lr_scheduler.step()
+#         print(f"[INFO] Training Loss after Epoch {epoch+1}: {epoch_loss:.4f}")
+
+#         # Evaluation
+#         mean_aps, mean_iou = evaluate(model, data_loader_test, device)
+#         print(f"[INFO] Evaluation Results after Epoch {epoch+1}:")
+#         print(f" - Mean IoU: {mean_iou:.4f}")
+#         for iou_thresh, ap in mean_aps.items():
+#             print(f" - mAP@{iou_thresh:.2f}: {ap:.4f}")
+
+#         # Write evaluation results to log file
+#         with open(log_file_path, "a") as f:
+#             for iou_thresh, ap in mean_aps.items():
+#                 f.write(f"{epoch},{mean_iou:.4f},{iou_thresh:.2f},{ap:.4f}\n")
+
+#         # Save checkpoint
+#         checkpoint_path = os.path.join(args.save_path, f"mrcnn_foodseg103_{epoch}.pth")
+#         save_dict = {
+#             'epoch': epoch,
+#             'model': model.module.state_dict() if isinstance(model, torch.nn.DataParallel) else model.state_dict(),
+#             'optimizer': optimizer.state_dict(),
+#             'lr_scheduler': lr_scheduler.state_dict()
+#         }
+#         torch.save(save_dict, checkpoint_path)
+#         torch.save(save_dict, last_path)
+#         print(f"[INFO] Checkpoint saved at {checkpoint_path}")
+
 def main():
     parser = argparse.ArgumentParser()
-    parser.add_argument('--gpus', type=str, default='0', help='Comma-separated GPU IDs to use, e.g. "0,1,2,3"')
-    parser.add_argument('--batch_size', type=int, default=8, help='Batch size for training and evaluation')
-    parser.add_argument('--save_path', type=str, default='./checkpoints', help='Path to save checkpoints and logs')
-    parser.add_argument('--resume', action='store_true', help='Resume training from the last checkpoint')
-    parser.add_argument('--num_epochs', type=int, default=30, help='Total number of training epochs')
-    parser.add_argument('--dataset_root', type=str, default='../FoodSeg103', help='Path to the FoodSeg103 dataset root')
-    parser.add_argument('--start_epoch', type=int, default=None, help='Start epoch for training')
-
+    parser.add_argument('--local_rank', type=int, default=0)
+    parser.add_argument('--batch_size', type=int, default=8)
+    parser.add_argument('--save_path', type=str, default='./checkpoints')
+    parser.add_argument('--resume', action='store_true')
+    parser.add_argument('--num_epochs', type=int, default=30)
+    parser.add_argument('--dataset_root', type=str, default='../FoodSeg103')
+    parser.add_argument('--start_epoch', type=int, default=None)
     args = parser.parse_args()
 
-    os.environ["CUDA_VISIBLE_DEVICES"] = args.gpus
+    dist.init_process_group(backend='nccl')
+    torch.cuda.set_device(args.local_rank)
+    device = torch.device("cuda", args.local_rank)
+
     os.makedirs(args.save_path, exist_ok=True)
     log_file_path = os.path.join(args.save_path, "eval_log.txt")
 
-    device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
-    print(f"[INFO] Using device: {device}")
+    dataset = FoodSeg103Dataset(args.dataset_root, subset="train", transforms=get_transform())
+    dataset_test = FoodSeg103Dataset(args.dataset_root, subset="test", transforms=get_transform())
 
-    dataset_root = args.dataset_root
-    num_classes = 104  # 103 classes + background
+    train_sampler = DistributedSampler(dataset)
+    test_sampler = DistributedSampler(dataset_test, shuffle=False)
 
-    dataset = FoodSeg103Dataset(dataset_root, subset="train", transforms=get_transform())
-    dataset_test = FoodSeg103Dataset(dataset_root, subset="test", transforms=get_transform())
-    data_loader = DataLoader(dataset, batch_size=args.batch_size, shuffle=True, num_workers=4, collate_fn=collate_fn)
-    data_loader_test = DataLoader(dataset_test, batch_size=args.batch_size, shuffle=False, num_workers=4, collate_fn=collate_fn)
-    print("[INFO] DataLoader created: ", len(data_loader))
+    data_loader = DataLoader(dataset, batch_size=args.batch_size, sampler=train_sampler,
+                             num_workers=4, collate_fn=collate_fn, pin_memory=True)
+    data_loader_test = DataLoader(dataset_test, batch_size=args.batch_size, sampler=test_sampler,
+                                  num_workers=4, collate_fn=collate_fn, pin_memory=True)
 
-    model = get_model_instance_segmentation(num_classes)
-    model.to(device)
-    if torch.cuda.device_count() > 1:
-        print(f"[INFO] Using {torch.cuda.device_count()} GPUs")
-        model = torch.nn.DataParallel(model)
-    else:
-        print("[INFO] Using a single GPU")
+    model = get_model_instance_segmentation(num_classes=104).to(device)
+    model = DDP(model, device_ids=[args.local_rank])
 
-    start_epoch = 0
-    num_epochs = args.num_epochs
-
-    last_path = os.path.join(args.save_path, "last.pth")
-    params = [p for p in model.parameters() if p.requires_grad]
-    optimizer = torch.optim.SGD(params, lr=0.005, momentum=0.9, weight_decay=0.0005)
+    optimizer = torch.optim.SGD([p for p in model.parameters() if p.requires_grad],
+                                lr=0.005, momentum=0.9, weight_decay=0.0005)
     lr_scheduler = torch.optim.lr_scheduler.StepLR(optimizer, step_size=5, gamma=0.1)
 
+    last_path = os.path.join(args.save_path, "last.pth")
+    start_epoch = 0
     if args.resume and os.path.exists(last_path):
-        print(f"[INFO] Resuming from checkpoint: {last_path}")
         checkpoint = torch.load(last_path, map_location=device)
-
-        model_state = checkpoint.get('model', checkpoint)  # fallback for legacy format
-        if isinstance(model, torch.nn.DataParallel):
-            model.module.load_state_dict(model_state)
-        else:
-            model.load_state_dict(model_state)
-
-        if 'optimizer' in checkpoint:
-            optimizer.load_state_dict(checkpoint['optimizer'])
-        if 'lr_scheduler' in checkpoint:
-            lr_scheduler.load_state_dict(checkpoint['lr_scheduler'])
-
-        if 'epoch' in checkpoint:
-            start_epoch = checkpoint['epoch'] + 1
-            print(f"[INFO] Resumed from epoch {checkpoint['epoch']}")
+        model.load_state_dict(checkpoint["model"])
+        optimizer.load_state_dict(checkpoint["optimizer"])
+        lr_scheduler.load_state_dict(checkpoint["lr_scheduler"])
+        start_epoch = checkpoint["epoch"] + 1
 
     if args.start_epoch is not None:
-        print(f"[INFO] Overriding start_epoch with {args.start_epoch}")
-        if args.start_epoch > num_epochs:
-            raise ValueError(f"Start epoch {args.start_epoch} is greater than the total number of epochs {num_epochs}")
         start_epoch = args.start_epoch
 
-    if not args.resume:
+    if args.local_rank == 0 and not args.resume:
         with open(log_file_path, "w") as f:
             f.write("Epoch,Mean_IoU,IoU_Threshold,AP\n")
 
-    for epoch in range(start_epoch, num_epochs):
-        print(f"\n[INFO] Starting epoch {epoch+1}/{num_epochs}...")
+    for epoch in range(start_epoch, args.num_epochs):
+        train_sampler.set_epoch(epoch)
         model.train()
-        epoch_loss = 0
-        progress_bar = tqdm(data_loader, desc=f"[Training] Epoch {epoch+1}")
+        epoch_loss = 0.0
 
-        for _, (images, targets) in enumerate(progress_bar):
-            images = [img.to(device) for img in images]
-            targets = [{k: v.to(device) for k, v in t.items()} for t in targets]
+        for images, targets in data_loader:
+            images = [img.to(device, non_blocking=True) for img in images]
+            targets = [{k: v.to(device, non_blocking=True) for k, v in t.items()} for t in targets]
 
             loss_dict = model(images, targets)
             losses = sum(loss for loss in loss_dict.values())
-            epoch_loss += losses.item()
 
             optimizer.zero_grad()
             losses.backward()
             optimizer.step()
-
-            losses.detach().cpu()
-            progress_bar.set_postfix(loss=losses.item())
+            epoch_loss += losses.item()
 
         lr_scheduler.step()
-        print(f"[INFO] Training Loss after Epoch {epoch+1}: {epoch_loss:.4f}")
 
-        # Evaluation
-        mean_aps, mean_iou = evaluate(model, data_loader_test, device)
-        print(f"[INFO] Evaluation Results after Epoch {epoch+1}:")
-        print(f" - Mean IoU: {mean_iou:.4f}")
-        for iou_thresh, ap in mean_aps.items():
-            print(f" - mAP@{iou_thresh:.2f}: {ap:.4f}")
+        if args.local_rank == 0:
+            print(f"[Epoch {epoch+1}] Loss: {epoch_loss:.4f}")
+            mean_aps, mean_iou = evaluate(model.module, data_loader_test, device)
+            with open(log_file_path, "a") as f:
+                for iou_thresh, ap in mean_aps.items():
+                    f.write(f"{epoch},{mean_iou:.4f},{iou_thresh:.2f},{ap:.4f}\n")
 
-        # Write evaluation results to log file
-        with open(log_file_path, "a") as f:
-            for iou_thresh, ap in mean_aps.items():
-                f.write(f"{epoch},{mean_iou:.4f},{iou_thresh:.2f},{ap:.4f}\n")
-
-        # Save checkpoint
-        checkpoint_path = os.path.join(args.save_path, f"mrcnn_foodseg103_{epoch}.pth")
-        save_dict = {
-            'epoch': epoch,
-            'model': model.module.state_dict() if isinstance(model, torch.nn.DataParallel) else model.state_dict(),
-            'optimizer': optimizer.state_dict(),
-            'lr_scheduler': lr_scheduler.state_dict()
-        }
-        torch.save(save_dict, checkpoint_path)
-        torch.save(save_dict, last_path)
-        print(f"[INFO] Checkpoint saved at {checkpoint_path}")
+            save_dict = {
+                'epoch': epoch,
+                'model': model.module.state_dict(),
+                'optimizer': optimizer.state_dict(),
+                'lr_scheduler': lr_scheduler.state_dict()
+            }
+            torch.save(save_dict, os.path.join(args.save_path, f"mrcnn_foodseg103_{epoch}.pth"))
+            torch.save(save_dict, last_path)
+            print(f"[INFO] Checkpoint saved after epoch {epoch+1}")
 
 if __name__ == "__main__":
     main()

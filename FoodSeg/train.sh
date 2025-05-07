@@ -17,11 +17,20 @@ cd /home/3D-FoodCalorie/FoodSeg
 python -c "import torch; print('PyTorch version:', torch.__version__); print('CUDA available:', torch.cuda.is_available()); print('CUDA version:', torch.version.cuda if torch.cuda.is_available() else 'NA'); print('GPU count:', torch.cuda.device_count()); print('GPU name:', torch.cuda.get_device_name(0) if torch.cuda.device_count() > 0 else 'NA')"
 
 # Run training script
-python finetune.py \
-  --gpus 0 \
-  --batch_size 16 \
+# python finetune.py \
+#   --gpus 0 \
+#   --batch_size 16 \
+#   --num_epochs 30 \
+#   --dataset_root /home/dataset/FoodSeg103 \
+#   --save_path /home/checkpoints/MaskRCNN \
+
+torchrun \
+  --nproc_per_node=2 \
+  --master_port=29500 \
+  finetune.py \
+  --batch_size 8 \
   --num_epochs 30 \
   --dataset_root /home/dataset/FoodSeg103 \
-  --save_path /home/checkpoints/MaskRCNN \
+  --save_path /home/checkpoints/MaskRCNN
 
 echo "Training complete!"
