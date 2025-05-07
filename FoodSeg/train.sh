@@ -18,8 +18,8 @@ python -c "import torch; print('PyTorch version:', torch.__version__); print('CU
 
 # Run training script
 python finetune.py \
-  --gpus 0,1 \
-  --batch_size 256 \
+  --gpus 0 \
+  --batch_size 16 \
   --num_epochs 30 \
   --dataset_root /home/dataset/FoodSeg103 \
   --save_path /home/checkpoints/MaskRCNN \
