@@ -6,7 +6,6 @@ set -e
 # Activate conda environment
 source $(conda info --base)/etc/profile.d/conda.sh
 conda activate food37
-unset CUDA_VISIBLE_DEVICES
 
 # Check GPU status
 nvidia-smi
