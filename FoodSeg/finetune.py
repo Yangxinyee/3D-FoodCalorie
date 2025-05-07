@@ -1,4 +1,5 @@
 import os
+import sys
 import numpy as np
 import argparse
 import torch
@@ -323,7 +324,8 @@ def main():
     parser.add_argument('--num_epochs', type=int, default=30)
     parser.add_argument('--dataset_root', type=str, default='../FoodSeg103')
     parser.add_argument('--start_epoch', type=int, default=None)
-    args = parser.parse_args()
+    # args = parser.parse_args()
+    args, _ = parser.parse_known_args(sys.argv[1:])
     print(f"[DEBUG] CUDA_VISIBLE_DEVICES={os.environ.get('CUDA_VISIBLE_DEVICES')}, local_rank={args.local_rank}, device_id={torch.cuda.current_device()}")
 
 
