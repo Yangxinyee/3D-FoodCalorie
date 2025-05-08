@@ -332,6 +332,7 @@ if __name__ == '__main__':
 
     model.cuda()
     weights = torch.load(args.pretrained_model)
+    print(weights.keys())
     new_state_dict = {}
     for k, v in weights['model'].items():
         if k.startswith('module.'):
