@@ -85,7 +85,7 @@ class DepthFinetuneDataset(torch.utils.data.Dataset):
         depth = depth.resize((self.target_size[1], self.target_size[0]), Image.NEAREST)
 
         # To tensor
-        depth_np = np.array(depth).astype(np.float32) * 1e-4  # convert mm to meters if needed
+        depth_np = np.array(depth).astype(np.float32) * 1e-3  # convert mm to meters if needed
         depth_tensor = torch.from_numpy(depth_np).unsqueeze(0)  # [1, H, W]
 
         if self.transform:
