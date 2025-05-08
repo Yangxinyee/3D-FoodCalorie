@@ -83,6 +83,8 @@ class DepthFinetuneDataset(torch.utils.data.Dataset):
             self.sample_dirs = all_samples[:split_index]
         elif subset == 'test':
             self.sample_dirs = all_samples[split_index:]
+        elif subset == 'all':
+            self.sample_dirs = all_samples
         else:
             raise ValueError(f"subset should be 'train' or 'test', got {subset}")
 
@@ -241,7 +243,7 @@ def main():
 
     os.makedirs(args.save_path, exist_ok=True)
 
-    dataset = DepthFinetuneDataset(args.dataset_root, transform=get_transform(), split_ratio=0.8, subset='train')
+    dataset = DepthFinetuneDataset(args.dataset_root, transform=get_transform(), split_ratio=0.8, subset='all')
     sampler = DistributedSampler(dataset, num_replicas=world_size, rank=rank, shuffle=True)
 
     dataset_test = DepthFinetuneDataset(args.dataset_root, transform=get_transform(), split_ratio=0.8, subset='test')
