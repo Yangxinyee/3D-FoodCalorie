@@ -333,7 +333,7 @@ if __name__ == '__main__':
     model.cuda()
     weights = torch.load(args.pretrained_model)
     new_state_dict = {}
-    for k, v in weights['model_state_dict'].items():
+    for k, v in weights['model'].items():
         if k.startswith('module.'):
             new_key = k[7:]
         else:
