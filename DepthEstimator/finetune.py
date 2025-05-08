@@ -52,7 +52,7 @@ def depth_to_disp(gt_depth, min_depth=0.03, max_depth=1.2):
     """
     valid_mask = (gt_depth > min_depth) & (gt_depth < max_depth)
 
-    inv_depth = 1.0 / np.clip(gt_depth, min_depth, max_depth)
+    inv_depth = 1.0 / torch.clamp(gt_depth, min=min_depth, max=max_depth)
     min_disp = 1.0 / max_depth
     max_disp = 1.0 / min_depth
 
