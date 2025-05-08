@@ -23,6 +23,7 @@ python infer.py \
   --pretrained_model /home/checkpoints/Nutrition5K_depth/last.pth \
   --min_depth 0.03 \
   --max_depth 0.6 \
+  --nutrition \
   --root_dir /home/tests | tee infer_demo.log
 
 # /home/checkpoints/Nutrition5K_depth/depth_epoch_3.pth
