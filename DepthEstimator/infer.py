@@ -110,8 +110,8 @@ def infer_nutrition5k(img_path, model, training_hw, min_depth=1e-3, max_depth=1.
         disp = model.infer_depth(img_t)
     pred_depth = 1.0 / (disp + 1e-6)
     pred_depth = torch.clamp(pred_depth, min=min_depth, max=max_depth)
-    print(torch.min(pred_depth), torch.max(pred_depth))
-    print(torch.max(pred_depth) / torch.min(pred_depth))
+    print(torch.min(disp), torch.max(disp))
+    print(torch.max(disp) / torch.min(disp))
     pred_depth = pred_depth.squeeze().cpu().numpy()
 
     pred_depth_resized = cv2.resize(pred_depth, (w, h), interpolation=cv2.INTER_NEAREST)
