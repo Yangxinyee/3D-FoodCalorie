@@ -237,13 +237,13 @@ def main():
     model = DDP(model, device_ids=[device_id])
 
     # Optimizer & LR Scheduler
-    # optimizer = torch.optim.SGD([p for p in model.parameters() if p.requires_grad],
-    #                             lr=0.005, momentum=0.9, weight_decay=0.0005)
-    optimizer = torch.optim.Adam(
-        [p for p in model.parameters() if p.requires_grad],
-        lr=0.005,
-        weight_decay=1e-5
-    )
+    optimizer = torch.optim.SGD([p for p in model.parameters() if p.requires_grad],
+                                lr=0.005, momentum=0.9, weight_decay=0.0005)
+    # optimizer = torch.optim.Adam(
+    #     [p for p in model.parameters() if p.requires_grad],
+    #     lr=0.005,
+    #     weight_decay=1e-5
+    # )
     lr_scheduler = torch.optim.lr_scheduler.StepLR(optimizer, step_size=5, gamma=0.1)
     # lr_scheduler = torch.optim.lr_scheduler.ReduceLROnPlateau(optimizer, mode='min', factor=0.5, patience=3)
     
@@ -303,7 +303,7 @@ def main():
                 [f" - mAP@{int(iou_thresh*100):.2f}: {ap:.4f}" for iou_thresh, ap in mean_aps.items()]
             )
             print(formatted_metrics)
-            
+
             with open(log_file_path, "a") as f:
                 f.write(formatted_metrics + "\n")
 
