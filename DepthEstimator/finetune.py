@@ -125,7 +125,12 @@ def finetune_one_epoch(model, data_loader, optimizer, device, epoch, max_depth=1
         optimizer.zero_grad()
 
         pred_disp = model.module.infer_depth(rgb)           
-        pred_depth = 1.0 / (pred_disp + 1e-6)
+        # pred_depth = 1.0 / (pred_disp + 1e-6)
+        min_disp = 1.0 / max_depth
+        max_disp = 1.0 / min_depth
+        scaled_disp = min_disp + (max_disp - min_disp) * pred_disp
+        pred_depth = 1.0 / scaled_disp
+        print(f"pred_depth: {pred_depth.min().item()}, {pred_depth.max().item()}")
 
         mask = (gt_depth_raw > min_depth) & (gt_depth_raw < max_depth)
         pred_depth = torch.clamp(pred_depth, min=min_depth, max=max_depth)
@@ -133,10 +138,7 @@ def finetune_one_epoch(model, data_loader, optimizer, device, epoch, max_depth=1
 
         loss = silog_loss(pred_depth, gt_depth, mask)
         loss.backward()
-        for name, param in model.named_parameters():
-            if param.grad is not None and param.requires_grad:
-                print(f"[Grad] {name}: {param.grad.abs().mean().item():.6f}")
-                
+
         optimizer.step()
 
         epoch_loss += loss.item()

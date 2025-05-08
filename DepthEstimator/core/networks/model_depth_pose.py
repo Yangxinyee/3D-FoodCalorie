@@ -402,10 +402,6 @@ class Model_depth_pose(nn.Module):
 
     def infer_depth(self, img):
         disp_list = self.depth_net(img)
-
-        disp_min, disp_max = disp_list[0].min().item(), disp_list[0].max().item()
-        print(f"[DEBUG] disp range: {disp_min:.6f} - {disp_max:.6f}")
-
         disp, depth = self.disp2depth(disp_list[0])
         return disp_list[0]
     
