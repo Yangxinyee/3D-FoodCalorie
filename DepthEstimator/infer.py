@@ -109,7 +109,6 @@ def infer_nutrition5k(img_path, model, training_hw, min_depth=1e-3, max_depth=1.
     with torch.no_grad():
         disp = model.infer_depth(img_t)
     pred_depth = 1.0 / (disp + 1e-6)
-    print(pred_depth.shape)
     pred_depth = torch.clamp(pred_depth, min=min_depth, max=max_depth)
     pred_depth = pred_depth.squeeze().cpu().numpy()
 
