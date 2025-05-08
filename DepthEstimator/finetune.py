@@ -243,7 +243,7 @@ def main():
 
     os.makedirs(args.save_path, exist_ok=True)
 
-    dataset = DepthFinetuneDataset(args.dataset_root, transform=get_transform(), split_ratio=0.8, subset='all')
+    dataset = DepthFinetuneDataset(args.dataset_root, transform=get_transform(), split_ratio=0.8, subset='train')
     sampler = DistributedSampler(dataset, num_replicas=world_size, rank=rank, shuffle=True)
 
     dataset_test = DepthFinetuneDataset(args.dataset_root, transform=get_transform(), split_ratio=0.8, subset='test')
