@@ -29,7 +29,7 @@ def get_transform():
                     std=[0.229, 0.224, 0.225])
     ])
 
-def load_model(path, model):
+def load_model(path, model, sigmoid=True):
     data = torch.load(path)
     state_dict = data['model_state_dict']
     new_state_dict = OrderedDict()
@@ -39,6 +39,12 @@ def load_model(path, model):
         else:
             new_state_dict[k] = v
     state_dict = new_state_dict
+    if not sigmoid:
+        filtered_state_dict = {}
+        for k, v in state_dict.items():
+            if not k.startswith('depth_net.decoder'):
+                filtered_state_dict[k] = v
+        state_dict = filtered_state_dict
     try:
         model.load_state_dict(state_dict)
     except RuntimeError as e:
@@ -129,7 +135,7 @@ def mse_loss(pred, target, mask=None):
         pred, target = pred[mask], target[mask]
     return torch.mean((pred - target) ** 2)
 
-def finetune_one_epoch(model, data_loader, optimizer, device, epoch, max_depth=1.2, min_depth=0.03):
+def finetune_one_epoch(model, data_loader, optimizer, device, epoch, max_depth=1.2, min_depth=0.03, sigmoid=True):
     model.train()
     epoch_loss = 0.0
 
@@ -145,14 +151,14 @@ def finetune_one_epoch(model, data_loader, optimizer, device, epoch, max_depth=1
 
         optimizer.zero_grad()
 
-        pred_disp = model.module.infer_depth(rgb)           
-        # # pred_depth = 1.0 / (pred_disp + 1e-6)
-        min_disp = 1.0 / max_depth
-        max_disp = 1.0 / min_depth
-        scaled_disp = min_disp + (max_disp - min_disp) * pred_disp
-        pred_depth = 1.0 / scaled_disp
-        # print(f"pred_depth_average: {pred_depth.mean().item()}")
-        # print(f"gt_depth_average: {gt_depth_raw.mean().item()}")
+        pred_disp = model.module.infer_depth(rgb)
+        if not sigmoid:
+            pred_depth = 1.0 / (pred_disp + 1e-6)
+        else:
+            min_disp = 1.0 / max_depth
+            max_disp = 1.0 / min_depth
+            scaled_disp = min_disp + (max_disp - min_disp) * pred_disp
+            pred_depth = 1.0 / scaled_disp
 
         mask = (gt_depth_raw > min_depth) & (gt_depth_raw < max_depth)
         pred_depth = torch.clamp(pred_depth, min=min_depth, max=max_depth)

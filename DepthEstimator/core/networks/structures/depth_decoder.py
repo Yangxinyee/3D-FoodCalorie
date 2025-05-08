@@ -44,7 +44,7 @@ class ConvBlock(nn.Module):
     
 
 class DepthDecoder(nn.Module):
-    def __init__(self, num_ch_enc, scales=range(4), num_output_channels=1, use_skips=True):
+    def __init__(self, num_ch_enc, scales=range(4), num_output_channels=1, use_skips=True, sigmoid=True):
         super().__init__()
 
         self.num_output_channels = num_output_channels
@@ -54,6 +54,7 @@ class DepthDecoder(nn.Module):
 
         self.num_ch_enc = num_ch_enc
         self.num_ch_dec = (self.num_ch_enc / 2).astype('int')
+        self.use_sigmoid = sigmoid
 
         # decoder
         self.convs = OrderedDict()
@@ -98,6 +99,9 @@ class DepthDecoder(nn.Module):
 
             if i in self.scales:
                 f = upsample(self.convs[("dispconv", i)](x), mode='bilinear').to(device)
-                self.outputs[("disp", i)] = self.sigmoid(f)
+                if self.use_sigmoid:
+                    self.outputs[("disp", i)] = self.sigmoid(f)
+                else:
+                    self.outputs[("disp", i)] = f
 
         return self.outputs

@@ -11,7 +11,7 @@ import torch.nn.functional as F
 import numpy as np
 
 class Model_depth_pose(nn.Module):
-    def __init__(self, cfg):
+    def __init__(self, cfg, sigmoid=True):
         super(Model_depth_pose, self).__init__()
         self.depth_match_num = cfg.depth_match_num
         self.depth_sample_ratio = cfg.depth_sample_ratio
@@ -19,7 +19,7 @@ class Model_depth_pose(nn.Module):
         self.w_flow_error = cfg.w_flow_error
         self.dataset = cfg.dataset
 
-        self.depth_net = Depth_Model(cfg)
+        self.depth_net = Depth_Model(cfg, sigmoid=sigmoid)
         # self.depth_net = Depth_Model_old(cfg.depth_scale)
         self.model_pose = Model_triangulate_pose(cfg)
 

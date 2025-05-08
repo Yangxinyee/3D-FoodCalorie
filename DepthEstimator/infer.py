@@ -51,15 +51,6 @@ def get_intrinsic_from_fov(width, height, fov_deg=60):
                      [0, fy, cy],
                      [0,  0,  1]])
 
-def get_intrinsic_from_fov(width, height, fov_deg=60):
-    """ Generate a pinhole camera intrinsic matrix from image size and field of view (FoV). """
-    fov_rad = np.deg2rad(fov_deg)
-    fx = fy = width / (2 * np.tan(fov_rad / 2))  # assuming square pixels
-    cx, cy = width / 2, height / 2
-    return np.array([[fx, 0, cx],
-                     [0, fy, cy],
-                     [0,  0,  1]])
-
 def infer_single_image(img_path, model, training_hw, min_depth, max_depth, save_dir='./', fov=60):
     img = cv2.imread(img_path)
     h, w = img.shape[0:2]
@@ -96,28 +87,6 @@ def visualize_depth(depth_map_meters, min_depth=0.03, max_depth=1.2, save_path='
     # Save image
     cv2.imwrite(save_path, depth_colored)
 
-# def infer_nutrition5k(img_path, model, training_hw, min_depth=1e-3, max_depth=1.2, save_dir='./', fov=60):
-#     img = cv2.imread(img_path)
-#     h, w = img.shape[0:2]
-
-#     img_resized = cv2.resize(img, (training_hw[1], training_hw[0]), interpolation=cv2.INTER_LINEAR)
-#     img_t = torch.from_numpy(np.transpose(img_resized, [2,0,1])).float() / 255.0
-#     img_t = T.Normalize(mean=[0.485, 0.456, 0.406],
-#                         std=[0.229, 0.224, 0.225])(img_t)
-#     img_t = img_t.unsqueeze(0).cuda()
-
-#     with torch.no_grad():
-#         disp = model.infer_depth(img_t)
-#     pred_depth = 1.0 / (disp + 1e-6)
-#     pred_depth = torch.clamp(pred_depth, min=min_depth, max=max_depth)
-#     pred_depth = pred_depth.squeeze().cpu().numpy()
-
-#     pred_depth_resized = cv2.resize(pred_depth, (w, h), interpolation=cv2.INTER_NEAREST)
-#     depth_mm = np.clip(pred_depth_resized * 1000, 0, 65535).astype(np.uint16)
-#     cv2.imwrite(os.path.join(save_dir, 'depth_raw_pred.png'), depth_mm)
-
-#     visualize_depth(pred_depth_resized, min_depth, max_depth, os.path.join(save_dir, 'depth_color_pred.png'))
-
 def infer_nutrition5k(img_path, model, training_hw, min_depth=0.03, max_depth=0.6, save_dir='./'):
     img = cv2.imread(img_path)
     h, w = img.shape[:2]
@@ -140,93 +109,16 @@ def infer_nutrition5k(img_path, model, training_hw, min_depth=0.03, max_depth=0.
 
     visualize_depth(pred_depth_resized, min_depth, max_depth, os.path.join(save_dir, 'depth_color_pred.png'))
 
-
-def sliding_window_inference(image_path, model, input_size=(256, 832), orig_size=(480, 640), stride_ratio=0.5, save_patches=False, patch_save_dir="model_inputs", save_dir="model_outputs"):
-    """
-    Args:
-        image_path (str): path to input RGB image
-        model (torch.nn.Module): depth prediction model
-        input_size (tuple): (H, W) input size expected by the model
-        orig_size (tuple): original image size (H, W), default is (480, 640)
-        stride_ratio (float): stride ratio w.r.t input height (e.g. 0.5 means 50% overlap)
-        save_patches (bool): whether to save input patches for inspection
-        patch_save_dir (str): directory to save patches
-
-    Returns:
-        depth_map_cropped (np.ndarray): predicted depth map of size (480, 640)
-    """
-
-    assert os.path.exists(image_path), f"Image not found: {image_path}"
-    img = Image.open(image_path).convert('RGB')
-    transform = T.ToTensor()
-    img_tensor = transform(img)  # [3, H, W]
-
-    orig_H, orig_W = orig_size
-    in_H, in_W = input_size
-
-    # === Padding image to match model input size along width ===
-    pad_h = max(0, in_H - orig_H)
-    pad_w = max(0, in_W - orig_W)
-    pad_top = pad_h // 2
-    pad_bottom = pad_h - pad_top
-    pad_left = pad_w // 2
-    pad_right = pad_w - pad_left
-
-    img_padded = F.pad(img_tensor, (pad_left, pad_right, pad_top, pad_bottom))  # [3, H_pad, W_pad]
-    img_padded = img_padded.unsqueeze(0).cuda()  # [1, 3, H_pad, W_pad]
-
-    _, _, H_pad, W_pad = img_padded.shape
-    stride_h = int(in_H * stride_ratio)
-
-    disp_full = torch.zeros((1, 1, H_pad, W_pad)).cuda()
-    count_map = torch.zeros((1, 1, H_pad, W_pad)).cuda()
-
-    if save_patches:
-        os.makedirs(patch_save_dir, exist_ok=True)
-
-    idx = 0
-    for y in range(0, H_pad - in_H + 1, stride_h):
-        patch = img_padded[:, :, y:y+in_H, :]  # [1, 3, 256, 832]
-
-        if save_patches:
-            patch_img = patch[0].permute(1, 2, 0).cpu().numpy()
-            patch_img = (patch_img * 255).astype(np.uint8)
-            Image.fromarray(patch_img).save(os.path.join(patch_save_dir, f'patch_{idx}.jpg'))
-
-        with torch.no_grad():
-            disp_patch = model.infer_depth(patch)  # [1, 1, 256, 832]
-        disp_full[:, :, y:y+in_H, :] += disp_patch
-        count_map[:, :, y:y+in_H, :] += 1
-        idx += 1
-
-    # === Normalize overlapped regions ===
-    disp_full /= (count_map + 1e-6)
-
-    # === Crop back to original image region ===
-    disp_cropped = disp_full[:, :, pad_top:pad_top+orig_H, pad_left:pad_left+orig_W]
-    disp_map = disp_cropped.squeeze().cpu().numpy()  # [H, W]
-    
-    K = get_intrinsic_from_fov(orig_W, orig_H, fov_deg=60)  # same as infer_single_image()
-    fx = K[0, 0]
-    depth_map = fx / (disp_map + 1e-6)  # [H, W]
-
-    visualizer = Visualizer_debug(dump_dir=save_dir)
-    disp = 1.0 / (disp_map + 1e-6)
-    disp = np.clip(disp, 0, np.percentile(disp, 95))  # 可选增强可视化效果
-
-    visualizer.save_depth_img(depth_map, name='depth_raw_pred')           # 保存灰度深度图
-    visualizer.save_disp_color_img(disp_map, name='colorized_depth_pred')             # 保存彩色 disparity 图
-    print(f"Saved depth_raw_pred & colorized_depth_pred to {save_dir}")
-
-
-def batch_infer_directory(root_dir, model, training_hw, min_depth, max_depth, sliding_window=False):
+def batch_infer_directory(root_dir, model, training_hw, min_depth, max_depth, nutrition=False):
     subdirs = [os.path.join(root_dir, d) for d in os.listdir(root_dir) if os.path.isdir(os.path.join(root_dir, d))]
     for subdir in tqdm(subdirs, desc="Batch Depth Inference"):
         rgb_path = os.path.join(subdir, "rgb.png")
         if os.path.exists(rgb_path):
-            if sliding_window:
-                sliding_window_inference(rgb_path, model, training_hw, save_dir=subdir)
+            if not nutrition:
+                print(f"Inferring single image: {rgb_path}")
+                infer_single_image(rgb_path, model, training_hw, min_depth, max_depth, save_dir=subdir)
             else:
+                print(f"Inferring nutrition5k image: {rgb_path}")
                 infer_nutrition5k(rgb_path, model, training_hw, min_depth, max_depth, save_dir=subdir)
         else:
             print(f"Skipping {subdir}: rgb.png not found.")
@@ -366,6 +258,7 @@ if __name__ == '__main__':
     arg_parser.add_argument('--pretrained_model', type=str, default=None, help='directory for loading flow pretrained models')
     arg_parser.add_argument('--result_dir', type=str, default=None, help='Set this only when task==demo. Directory for saving predictions')
     arg_parser.add_argument('--indices', type=str, default='0,5,10,15,25', help='Set this only when task==demo. Image indices to visualize, comma-separated, e.g., 0,5,10,15')
+    arg_parser.add_argument('--nutrition', action='store_true', help='Set this only when task==batch. Whether to use nutrition5k dataset.')
 
     args = arg_parser.parse_args()
 
