@@ -4,10 +4,10 @@ import cv2
 import torch
 import numpy as np
 import argparse
-import matplotlib.pyplot as plt
-import torch.nn.functional as F
 import torchvision.transforms as T
-from PIL import Image
+import PIL.Image as pil
+import matplotlib as mpl
+import matplotlib.cm as cm
 from tqdm import tqdm
 from collections import OrderedDict
 from core.dataset import KITTI_2015
@@ -73,6 +73,14 @@ def infer_single_image(img_path, model, training_hw, min_depth, max_depth, save_
     visualizer.save_disp_color_img(disp_resized, name='colorized_depth_pred')
     print(f'Depth prediction saved in {save_dir}, using fx={fx:.2f}')
 
+def save_disp_color_img(disp, save_path):
+        vmax = np.percentile(disp, 95)
+        normalizer = mpl.colors.Normalize(vmin=disp.min(), vmax=vmax)
+        mapper = cm.ScalarMappable(norm=normalizer, cmap='magma')
+        colormapped_im = (mapper.to_rgba(disp)[:,:,:3] * 255).astype(np.uint8)
+        im = pil.fromarray(colormapped_im)
+        im.save(save_path)
+
 def visualize_depth(depth_map_meters, min_depth=0.03, max_depth=1.2, save_path='depth_color_pred.png'):
     """
     depth_map_meters: np.ndarray [H, W], float32, in meters
@@ -107,7 +115,8 @@ def infer_nutrition5k(img_path, model, training_hw, min_depth=0.03, max_depth=0.
     depth_mm = np.clip(pred_depth_resized * 10000, 0, 65535).astype(np.uint16)
     cv2.imwrite(os.path.join(save_dir, 'depth_raw_pred.png'), depth_mm)
 
-    visualize_depth(pred_depth_resized, min_depth, max_depth, os.path.join(save_dir, 'depth_color_pred.png'))
+    # visualize_depth(pred_depth_resized, min_depth, max_depth, os.path.join(save_dir, 'depth_color_pred.png'))
+    save_disp_color_img(pred_depth_resized, os.path.join(save_dir, 'depth_color_pred.png'))
 
 def batch_infer_directory(root_dir, model, training_hw, min_depth, max_depth, nutrition=False):
     subdirs = [os.path.join(root_dir, d) for d in os.listdir(root_dir) if os.path.isdir(os.path.join(root_dir, d))]
