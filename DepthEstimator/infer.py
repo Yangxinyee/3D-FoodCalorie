@@ -14,6 +14,7 @@ from core.networks.model_depth_pose import Model_depth_pose
 from core.networks.structures.net_utils import warp_flow
 from core.visualize.visualizer import Visualizer_debug
 from core.evaluation.flowlib import flow_to_image
+from finetune import load_model
 
 def disp2depth(disp, min_depth=0.01, max_depth=100.0):
     min_disp = 1 / max_depth
@@ -30,22 +31,6 @@ def get_intrinsic_from_fov(width, height, fov_deg=60):
     return np.array([[fx, 0, cx],
                      [0, fy, cy],
                      [0,  0,  1]])
-
-# def infer_single_image(img_path, model, training_hw, min_depth, max_depth, save_dir='./'):
-#     img = cv2.imread(img_path)
-#     h, w = img.shape[0:2]
-#     img_resized = cv2.resize(img, (training_hw[1], training_hw[0]))
-#     img_t = torch.from_numpy(np.transpose(img_resized, [2,0,1])).float().cuda().unsqueeze(0) / 255.0
-#     disp = model.infer_depth(img_t)
-#     disp = np.transpose(disp[0].cpu().detach().numpy(), [1,2,0])
-#     disp_resized = cv2.resize(disp, (w,h))
-#     # depth = 1.0 / (1e-6 + disp_resized)
-#     _, depth = disp2depth(disp_resized, min_depth, max_depth)
-
-#     visualizer = Visualizer_debug(dump_dir=save_dir)
-#     visualizer.save_depth_img(depth, name='depth_raw_pred')
-#     visualizer.save_disp_color_img(disp_resized, name='colorized_depth_pred')
-#     print('Depth prediction saved in ' + save_dir)
 
 def get_intrinsic_from_fov(width, height, fov_deg=60):
     """ Generate a pinhole camera intrinsic matrix from image size and field of view (FoV). """
@@ -329,19 +314,8 @@ if __name__ == '__main__':
         setattr(cfg_new, attr, cfg[attr])
 
     model = Model_depth_pose(cfg_new)
-
     model.cuda()
-    weights = torch.load(args.pretrained_model)
-    print(weights.keys())
-    new_state_dict = {}
-    for k, v in weights['model'].items():
-        if k.startswith('module.'):
-            new_key = k[7:]
-        else:
-            new_key = k
-        new_state_dict[new_key] = v
-
-    model.load_state_dict(new_state_dict)
+    model = load_model(args.pretrained_model, model)
     model.eval()
     print('Model Loaded.')
 
