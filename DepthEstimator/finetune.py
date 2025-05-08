@@ -108,6 +108,11 @@ def silog_loss(pred, target, mask=None, variance_focus=0.85):
     d = torch.var(g) + variance_focus * (torch.mean(g) ** 2)
     return d * 10.0
 
+def mse_loss(pred, target, mask=None):
+    if mask is not None:
+        pred, target = pred[mask], target[mask]
+    return torch.mean((pred - target) ** 2)
+
 def finetune_one_epoch(model, data_loader, optimizer, device, epoch, max_depth=1.2, min_depth=0.1):
     model.train()
     epoch_loss = 0.0
@@ -137,7 +142,8 @@ def finetune_one_epoch(model, data_loader, optimizer, device, epoch, max_depth=1
         pred_depth = torch.clamp(pred_depth, min=min_depth, max=max_depth)
         gt_depth = torch.clamp(gt_depth_raw, min=min_depth, max=max_depth)
 
-        loss = silog_loss(pred_depth, gt_depth, mask)
+        # loss = silog_loss(pred_depth, gt_depth, mask)
+        loss = mse_loss(pred_depth, gt_depth, mask)
         loss.backward()
 
         optimizer.step()
