@@ -82,7 +82,7 @@ def infer_single_image(img_path, model, training_hw, min_depth, max_depth, save_
     visualizer.save_disp_color_img(disp_resized, name='colorized_depth_pred')
     print(f'Depth prediction saved in {save_dir}, using fx={fx:.2f}')
 
-def visualize_depth(depth_map_meters, min_depth=1e-3, max_depth=1.2, save_path='depth_color_pred.png'):
+def visualize_depth(depth_map_meters, min_depth=0.03, max_depth=1.2, save_path='depth_color_pred.png'):
     """
     depth_map_meters: np.ndarray [H, W], float32, in meters
     """
@@ -118,7 +118,7 @@ def visualize_depth(depth_map_meters, min_depth=1e-3, max_depth=1.2, save_path='
 
 #     visualize_depth(pred_depth_resized, min_depth, max_depth, os.path.join(save_dir, 'depth_color_pred.png'))
 
-def infer_nutrition5k(img_path, model, training_hw, min_depth=0.1, max_depth=6.7, save_dir='./', fov=60):
+def infer_nutrition5k(img_path, model, training_hw, min_depth=0.03, max_depth=1.2, save_dir='./'):
     img = cv2.imread(img_path)
     h, w = img.shape[:2]
     img_resized = cv2.resize(img, (training_hw[1], training_hw[0]), interpolation=cv2.INTER_LINEAR)

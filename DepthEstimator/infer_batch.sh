@@ -21,8 +21,8 @@ python infer.py \
   --gpu 0 \
   --task batch \
   --pretrained_model /home/checkpoints/Nutrition5K_depth/last.pth \
-  --min_depth 0.01 \
-  --max_depth 6.7 \
+  --min_depth 0.03 \
+  --max_depth 1.2 \
   --root_dir /home/tests | tee infer_demo.log
 
 # /home/checkpoints/Nutrition5K_depth/depth_epoch_3.pth

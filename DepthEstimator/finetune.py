@@ -113,7 +113,7 @@ def mse_loss(pred, target, mask=None):
         pred, target = pred[mask], target[mask]
     return torch.mean((pred - target) ** 2)
 
-def finetune_one_epoch(model, data_loader, optimizer, device, epoch, max_depth=1.2, min_depth=0.1):
+def finetune_one_epoch(model, data_loader, optimizer, device, epoch, max_depth=1.2, min_depth=0.03):
     model.train()
     epoch_loss = 0.0
 
@@ -155,7 +155,7 @@ def finetune_one_epoch(model, data_loader, optimizer, device, epoch, max_depth=1
 
     return epoch_loss / len(data_loader)
 
-def evaluate_on_dataset(model, data_loader, device, min_depth=1e-6, max_depth=12):
+def evaluate_on_dataset(model, data_loader, device, min_depth=0.03, max_depth=1.2):
     model.eval()
     pred_depths, gt_depths = [], []
 
