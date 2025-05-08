@@ -166,8 +166,8 @@ def finetune_one_epoch(model, data_loader, optimizer, device, epoch, max_depth=1
         pred_depth = torch.clamp(pred_depth, min=min_depth, max=max_depth)
         gt_depth = torch.clamp(gt_depth_raw, min=min_depth, max=max_depth)
 
-        # loss = silog_loss(pred_depth, gt_depth, mask)
-        loss = mse_loss(pred_depth, gt_depth, mask)
+        loss = silog_loss(pred_depth, gt_depth, mask)
+        # loss = mse_loss(pred_depth, gt_depth, mask)
 
         loss.backward()
 
