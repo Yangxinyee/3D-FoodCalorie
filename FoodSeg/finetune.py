@@ -95,10 +95,13 @@ class FoodSeg103Dataset(torch.utils.data.Dataset):
         return len(self.imgs)
 
 def get_transform():
+    # return T.Compose([
+    #     T.ToTensor(),
+    #     T.Normalize(mean=[0.485, 0.456, 0.406],
+    #                 std=[0.229, 0.224, 0.225])
+    # ])
     return T.Compose([
-        T.ToTensor(),
-        T.Normalize(mean=[0.485, 0.456, 0.406],
-                    std=[0.229, 0.224, 0.225])
+        T.ToTensor()
     ])
 
 def get_model_instance_segmentation(num_classes):
@@ -295,11 +298,14 @@ def main():
             print(f"[Epoch {epoch+1}] Loss: {epoch_loss:.4f}")
             mean_aps, mean_iou = evaluate(model.module, data_loader_test, device)
 
+            # Log in the requested format
+            formatted_metrics = f"[Epoch: {epoch+1}] - Mean IoU: {mean_iou:.4f}" + "".join(
+                [f" - mAP@{int(iou_thresh*100):.2f}: {ap:.4f}" for iou_thresh, ap in mean_aps.items()]
+            )
+            print(formatted_metrics)
+            
             with open(log_file_path, "a") as f:
-                f.write(f"[INFO] Evaluation Results:")
-                f.write(f" - Mean IoU: {mean_iou:.4f}")
-                for iou_thresh, ap in mean_aps.items():
-                    f.write(f" - mAP@{iou_thresh:.2f}: {ap:.4f}")
+                f.write(formatted_metrics + "\n")
 
             save_dict = {
                 'epoch': epoch,
