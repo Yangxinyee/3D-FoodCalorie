@@ -6,7 +6,7 @@ from PIL import Image
 from tqdm import tqdm
 
 # === Estimate Intrinsic Matrix ===
-def get_intrinsic_from_fov(width, height, fov_deg=75):
+def get_intrinsic_from_fov(width, height, fov_deg=60):
     fov_rad = np.deg2rad(fov_deg)
     fx = fy = width / (2 * np.tan(fov_rad / 2))
     cx, cy = width / 2, height / 2

@@ -118,7 +118,7 @@ def visualize_depth(depth_map_meters, min_depth=0.03, max_depth=1.2, save_path='
 
 #     visualize_depth(pred_depth_resized, min_depth, max_depth, os.path.join(save_dir, 'depth_color_pred.png'))
 
-def infer_nutrition5k(img_path, model, training_hw, min_depth=0.03, max_depth=1.2, save_dir='./'):
+def infer_nutrition5k(img_path, model, training_hw, min_depth=0.03, max_depth=0.6, save_dir='./'):
     img = cv2.imread(img_path)
     h, w = img.shape[:2]
     img_resized = cv2.resize(img, (training_hw[1], training_hw[0]), interpolation=cv2.INTER_LINEAR)
