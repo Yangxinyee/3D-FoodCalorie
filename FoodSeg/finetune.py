@@ -95,9 +95,11 @@ class FoodSeg103Dataset(torch.utils.data.Dataset):
         return len(self.imgs)
 
 def get_transform():
-    transforms = []
-    transforms.append(T.ToTensor())
-    return T.Compose(transforms)
+    return T.Compose([
+        T.ToTensor(),
+        T.Normalize(mean=[0.485, 0.456, 0.406],
+                    std=[0.229, 0.224, 0.225])
+    ])
 
 def get_model_instance_segmentation(num_classes):
     model = maskrcnn_resnet50_fpn(weights="DEFAULT")
@@ -193,128 +195,6 @@ def evaluate(model, data_loader, device, iou_thresholds=[0.5, 0.75]):
     mean_aps = {iou_thresh: (sum(aps) / len(aps) if aps else 0.0) for iou_thresh, aps in APs.items()}
     return mean_aps, mean_ious
 
-
-# def main():
-#     parser = argparse.ArgumentParser()
-#     parser.add_argument('--gpus', type=str, default='0', help='Comma-separated GPU IDs to use, e.g. "0,1,2,3"')
-#     parser.add_argument('--batch_size', type=int, default=8, help='Batch size for training and evaluation')
-#     parser.add_argument('--save_path', type=str, default='./checkpoints', help='Path to save checkpoints and logs')
-#     parser.add_argument('--resume', action='store_true', help='Resume training from the last checkpoint')
-#     parser.add_argument('--num_epochs', type=int, default=30, help='Total number of training epochs')
-#     parser.add_argument('--dataset_root', type=str, default='../FoodSeg103', help='Path to the FoodSeg103 dataset root')
-#     parser.add_argument('--start_epoch', type=int, default=None, help='Start epoch for training')
-
-#     args = parser.parse_args()
-
-#     os.environ["CUDA_VISIBLE_DEVICES"] = args.gpus
-#     os.makedirs(args.save_path, exist_ok=True)
-#     log_file_path = os.path.join(args.save_path, "eval_log.txt")
-
-#     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
-#     print(f"[INFO] Using device: {device}")
-
-#     dataset_root = args.dataset_root
-#     num_classes = 104  # 103 classes + background
-
-#     dataset = FoodSeg103Dataset(dataset_root, subset="train", transforms=get_transform())
-#     dataset_test = FoodSeg103Dataset(dataset_root, subset="test", transforms=get_transform())
-#     data_loader = DataLoader(dataset, batch_size=args.batch_size, shuffle=True, num_workers=4, collate_fn=collate_fn)
-#     data_loader_test = DataLoader(dataset_test, batch_size=args.batch_size, shuffle=False, num_workers=4, collate_fn=collate_fn)
-#     print("[INFO] DataLoader created: ", len(data_loader))
-
-#     model = get_model_instance_segmentation(num_classes)
-#     model.to(device)
-#     if torch.cuda.device_count() > 1:
-#         print(f"[INFO] Using {torch.cuda.device_count()} GPUs")
-#         model = torch.nn.DataParallel(model)
-#     else:
-#         print("[INFO] Using a single GPU")
-
-#     start_epoch = 0
-#     num_epochs = args.num_epochs
-
-#     last_path = os.path.join(args.save_path, "last.pth")
-#     params = [p for p in model.parameters() if p.requires_grad]
-#     optimizer = torch.optim.SGD(params, lr=0.005, momentum=0.9, weight_decay=0.0005)
-#     lr_scheduler = torch.optim.lr_scheduler.StepLR(optimizer, step_size=5, gamma=0.1)
-
-#     if args.resume and os.path.exists(last_path):
-#         print(f"[INFO] Resuming from checkpoint: {last_path}")
-#         checkpoint = torch.load(last_path, map_location=device)
-
-#         model_state = checkpoint.get('model', checkpoint)  # fallback for legacy format
-#         if isinstance(model, torch.nn.DataParallel):
-#             model.module.load_state_dict(model_state)
-#         else:
-#             model.load_state_dict(model_state)
-
-#         if 'optimizer' in checkpoint:
-#             optimizer.load_state_dict(checkpoint['optimizer'])
-#         if 'lr_scheduler' in checkpoint:
-#             lr_scheduler.load_state_dict(checkpoint['lr_scheduler'])
-
-#         if 'epoch' in checkpoint:
-#             start_epoch = checkpoint['epoch'] + 1
-#             print(f"[INFO] Resumed from epoch {checkpoint['epoch']}")
-
-#     if args.start_epoch is not None:
-#         print(f"[INFO] Overriding start_epoch with {args.start_epoch}")
-#         if args.start_epoch > num_epochs:
-#             raise ValueError(f"Start epoch {args.start_epoch} is greater than the total number of epochs {num_epochs}")
-#         start_epoch = args.start_epoch
-
-#     if not args.resume:
-#         with open(log_file_path, "w") as f:
-#             f.write("Epoch,Mean_IoU,IoU_Threshold,AP\n")
-
-#     for epoch in range(start_epoch, num_epochs):
-#         print(f"\n[INFO] Starting epoch {epoch+1}/{num_epochs}...")
-#         model.train()
-#         epoch_loss = 0
-#         progress_bar = tqdm(data_loader, desc=f"[Training] Epoch {epoch+1}")
-
-#         for _, (images, targets) in enumerate(progress_bar):
-#             images = [img.to(device) for img in images]
-#             targets = [{k: v.to(device) for k, v in t.items()} for t in targets]
-
-#             loss_dict = model(images, targets)
-#             losses = sum(loss for loss in loss_dict.values())
-#             epoch_loss += losses.item()
-
-#             optimizer.zero_grad()
-#             losses.backward()
-#             optimizer.step()
-
-#             losses.detach().cpu()
-#             progress_bar.set_postfix(loss=losses.item())
-
-#         lr_scheduler.step()
-#         print(f"[INFO] Training Loss after Epoch {epoch+1}: {epoch_loss:.4f}")
-
-#         # Evaluation
-#         mean_aps, mean_iou = evaluate(model, data_loader_test, device)
-#         print(f"[INFO] Evaluation Results after Epoch {epoch+1}:")
-#         print(f" - Mean IoU: {mean_iou:.4f}")
-#         for iou_thresh, ap in mean_aps.items():
-#             print(f" - mAP@{iou_thresh:.2f}: {ap:.4f}")
-
-#         # Write evaluation results to log file
-#         with open(log_file_path, "a") as f:
-#             for iou_thresh, ap in mean_aps.items():
-#                 f.write(f"{epoch},{mean_iou:.4f},{iou_thresh:.2f},{ap:.4f}\n")
-
-#         # Save checkpoint
-#         checkpoint_path = os.path.join(args.save_path, f"mrcnn_foodseg103_{epoch}.pth")
-#         save_dict = {
-#             'epoch': epoch,
-#             'model': model.module.state_dict() if isinstance(model, torch.nn.DataParallel) else model.state_dict(),
-#             'optimizer': optimizer.state_dict(),
-#             'lr_scheduler': lr_scheduler.state_dict()
-#         }
-#         torch.save(save_dict, checkpoint_path)
-#         torch.save(save_dict, last_path)
-#         print(f"[INFO] Checkpoint saved at {checkpoint_path}")
-
 def main():
     parser = argparse.ArgumentParser()
     parser.add_argument('--local_rank', type=int, default=0)
@@ -354,10 +234,17 @@ def main():
     model = DDP(model, device_ids=[device_id])
 
     # Optimizer & LR Scheduler
-    optimizer = torch.optim.SGD([p for p in model.parameters() if p.requires_grad],
-                                lr=0.005, momentum=0.9, weight_decay=0.0005)
-    lr_scheduler = torch.optim.lr_scheduler.StepLR(optimizer, step_size=5, gamma=0.1)
-
+    # optimizer = torch.optim.SGD([p for p in model.parameters() if p.requires_grad],
+    #                             lr=0.005, momentum=0.9, weight_decay=0.0005)
+    # lr_scheduler = torch.optim.lr_scheduler.StepLR(optimizer, step_size=5, gamma=0.1)
+    # Optimizer & LR Scheduler
+    optimizer = torch.optim.Adam(
+        [p for p in model.parameters() if p.requires_grad],
+        lr=0.005,
+        weight_decay=1e-5
+    )
+    lr_scheduler = torch.optim.lr_scheduler.ReduceLROnPlateau(optimizer, mode='min', factor=0.5, patience=3)
+    
     # Checkpoint
     last_path = os.path.join(args.save_path, "last.pth")
     start_epoch = 0
@@ -410,8 +297,10 @@ def main():
             mean_aps, mean_iou = evaluate(model.module, data_loader_test, device)
 
             with open(log_file_path, "a") as f:
+                f.write(f"[INFO] Evaluation Results:")
+                f.write(f" - Mean IoU: {mean_iou:.4f}")
                 for iou_thresh, ap in mean_aps.items():
-                    f.write(f"{epoch},{mean_iou:.4f},{iou_thresh:.2f},{ap:.4f}\n")
+                    f.write(f" - mAP@{iou_thresh:.2f}: {ap:.4f}")
 
             save_dict = {
                 'epoch': epoch,
