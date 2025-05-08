@@ -150,16 +150,14 @@ def evaluate_on_dataset(model, data_loader, device, min_depth=1e-3, max_depth=12
         for rgb, gt_depth in data_loader:
             rgb = rgb.to(device)
             gt_depth = gt_depth.squeeze(1).cpu().numpy()  # [B, H, W]
-            print(f"gt_depth: {gt_depth.shape}")
-            print(f"gt_depth: {np.min(gt_depth)}, {np.max(gt_depth)}")
-            print(f"gt_depth_ratio: {np.max(gt_depth) / np.min(gt_depth)}")
 
-            pred_disp = model.infer_depth(rgb)        
+            pred_disp = model.infer_depth(rgb)  
+            disp_min, disp_max = pred_disp.min().item(), pred_disp.max().item()
+            print(f"[DEBUG] disp range: {disp_min:.6f} - {disp_max:.6f}")      
+
             pred_depth = 1.0 / (pred_disp + 1e-6)
             pred_depth = torch.clamp(pred_depth, min=min_depth, max=max_depth)
             pred_depth = pred_depth.squeeze(1).cpu().numpy()
-            print(f"pred_depth: {np.min(pred_depth)}, {np.max(pred_depth)}")
-            print(f"pred_depth_ratio: {np.max(pred_depth) / np.min(pred_depth)}")
 
             gt_depths.extend(gt_depth)
             pred_depths.extend(pred_depth)
@@ -245,7 +243,11 @@ def main():
                 param.requires_grad = False
         else:
             raise ValueError(f"Invalid encoder_decoder value: {args.encoder_decoder}")
-        
+    
+    for name, param in model.named_parameters():
+        if param.requires_grad:
+            print(f"[Trainable] {name}")
+            
     optimizer = torch.optim.AdamW(
         [p for p in model.parameters() if p.requires_grad],
         lr=1e-4,
