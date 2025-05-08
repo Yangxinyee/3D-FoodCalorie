@@ -135,7 +135,7 @@ def infer_nutrition5k(img_path, model, training_hw, min_depth=0.1, max_depth=6.7
     pred_depth = pred_depth.squeeze().cpu().numpy()  # [H, W]
     pred_depth_resized = cv2.resize(pred_depth, (w, h), interpolation=cv2.INTER_NEAREST)
 
-    depth_mm = np.clip(pred_depth_resized * 10000, 0, 65535).astype(np.uint16)
+    depth_mm = np.clip(pred_depth_resized * 1000, 0, 65535).astype(np.uint16)
     cv2.imwrite(os.path.join(save_dir, 'depth_raw_pred.png'), depth_mm)
 
     visualize_depth(pred_depth_resized, min_depth, max_depth, os.path.join(save_dir, 'depth_color_pred.png'))
