@@ -18,7 +18,10 @@ from core.evaluation.flowlib import flow_to_image
 
 def load_model(path, model):
     data = torch.load(path)
-    state_dict = data['model']
+    try:
+        state_dict = data['model']
+    except:
+        state_dict = data['model_state_dict']
     new_state_dict = OrderedDict()
     for k, v in state_dict.items():
         if k.startswith('module.'):
