@@ -45,6 +45,22 @@ def load_model(path, model):
         raise RuntimeError(f"Failed to load weights: {e}")
     return model
 
+def depth_to_disp(gt_depth, min_depth=0.03, max_depth=1.2):
+    """
+    Convert depth (in meters) to normalized disparity in [0,1]
+    Invalid values (<=0 or >= max_sensor_range) will be set to 0
+    """
+    valid_mask = (gt_depth > min_depth) & (gt_depth < max_depth)
+
+    inv_depth = 1.0 / np.clip(gt_depth, min_depth, max_depth)
+    min_disp = 1.0 / max_depth
+    max_disp = 1.0 / min_depth
+
+    disp = (inv_depth - min_disp) / (max_disp - min_disp)
+    disp[~valid_mask] = 0.0
+
+    return disp
+
 class DepthFinetuneDataset(torch.utils.data.Dataset):
     def __init__(self, root, transform=None, target_size=(192, 256), split_ratio=0.8, subset='train'):
         self.root = root
@@ -126,24 +142,27 @@ def finetune_one_epoch(model, data_loader, optimizer, device, epoch, max_depth=1
     for i, (rgb, gt_depth) in pbar:
         rgb = rgb.to(device, non_blocking=True)            # [B, 3, H, W]
         gt_depth_raw = gt_depth.to(device, non_blocking=True) # [B, 1, H, W]
+        gt_disp = depth_to_disp(gt_depth_raw)
 
         optimizer.zero_grad()
 
         pred_disp = model.module.infer_depth(rgb)           
-        # pred_depth = 1.0 / (pred_disp + 1e-6)
-        min_disp = 1.0 / max_depth
-        max_disp = 1.0 / min_depth
-        scaled_disp = min_disp + (max_disp - min_disp) * pred_disp
-        pred_depth = 1.0 / scaled_disp
-        print(f"pred_depth_average: {pred_depth.mean().item()}")
-        print(f"gt_depth_average: {gt_depth_raw.mean().item()}")
+        # # pred_depth = 1.0 / (pred_disp + 1e-6)
+        # min_disp = 1.0 / max_depth
+        # max_disp = 1.0 / min_depth
+        # scaled_disp = min_disp + (max_disp - min_disp) * pred_disp
+        # pred_depth = 1.0 / scaled_disp
+        # print(f"pred_depth_average: {pred_depth.mean().item()}")
+        # print(f"gt_depth_average: {gt_depth_raw.mean().item()}")
 
         mask = (gt_depth_raw > min_depth) & (gt_depth_raw < max_depth)
-        pred_depth = torch.clamp(pred_depth, min=min_depth, max=max_depth)
-        gt_depth = torch.clamp(gt_depth_raw, min=min_depth, max=max_depth)
+        # pred_depth = torch.clamp(pred_depth, min=min_depth, max=max_depth)
+        # gt_depth = torch.clamp(gt_depth_raw, min=min_depth, max=max_depth)
 
         # loss = silog_loss(pred_depth, gt_depth, mask)
-        loss = mse_loss(pred_depth, gt_depth, mask)
+        # loss = mse_loss(pred_depth, gt_depth, mask)
+
+        loss = F.mse_loss(pred_disp[mask], gt_disp[mask])
         loss.backward()
 
         optimizer.step()
