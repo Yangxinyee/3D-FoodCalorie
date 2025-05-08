@@ -108,7 +108,7 @@ def silog_loss(pred, target, mask=None, variance_focus=0.85):
     d = torch.var(g) + variance_focus * (torch.mean(g) ** 2)
     return d * 10.0
 
-def finetune_one_epoch(model, data_loader, optimizer, device, epoch, max_depth=1.2, min_depth=1e-3):
+def finetune_one_epoch(model, data_loader, optimizer, device, epoch, max_depth=12, min_depth=1e-3):
     model.train()
     epoch_loss = 0.0
 
@@ -142,7 +142,7 @@ def finetune_one_epoch(model, data_loader, optimizer, device, epoch, max_depth=1
 
     return epoch_loss / len(data_loader)
 
-def evaluate_on_dataset(model, data_loader, device, min_depth=1e-3, max_depth=1.2):
+def evaluate_on_dataset(model, data_loader, device, min_depth=1e-3, max_depth=12):
     model.eval()
     pred_depths, gt_depths = [], []
 
