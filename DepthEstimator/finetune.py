@@ -68,7 +68,7 @@ def depth_to_disp(gt_depth, min_depth=0.03, max_depth=1.2):
     return disp
 
 class DepthFinetuneDataset(torch.utils.data.Dataset):
-    def __init__(self, root, transform=None, target_size=(192, 256), split_ratio=0.8, subset='train'):
+    def __init__(self, root, transform=None, target_size=(192, 256), split_ratio=0.8, subset='train', few_shot=-1):
         self.root = root
         self.sample_dirs = [os.path.join(root, d) for d in os.listdir(root) if os.path.isdir(os.path.join(root, d))]
         self.transform = transform
@@ -78,15 +78,23 @@ class DepthFinetuneDataset(torch.utils.data.Dataset):
         np.random.seed(seed)
         np.random.shuffle(all_samples)
 
-        split_index = int(len(all_samples) * split_ratio)
-        if subset == 'train':
-            self.sample_dirs = all_samples[:split_index]
-        elif subset == 'test':
-            self.sample_dirs = all_samples[split_index:]
-        elif subset == 'all':
-            self.sample_dirs = all_samples
+        if few_shot == -1:
+            split_index = int(len(all_samples) * split_ratio)
+            if subset == 'train':
+                self.sample_dirs = all_samples[:split_index]
+            elif subset == 'test':
+                self.sample_dirs = all_samples[split_index:]
+            elif subset == 'all':
+                self.sample_dirs = all_samples
+            else:
+                raise ValueError(f"subset should be 'train' or 'test', got {subset}")
         else:
-            raise ValueError(f"subset should be 'train' or 'test', got {subset}")
+            if subset == 'train':
+                self.sample_dirs = all_samples[:few_shot]
+            elif subset == 'test':
+                self.sample_dirs = all_samples[few_shot:]
+            else:
+                raise ValueError(f"subset should be 'train' or 'test', got {subset}")
 
     def __len__(self):
         return len(self.sample_dirs)
@@ -215,6 +223,7 @@ def main():
     parser.add_argument('--mode', type=str, default='depth', help='training mode.')
     parser.add_argument('--dataset_root', type=str, required=True)
     parser.add_argument('--start_epoch', type=int, default=None)
+    parser.add_argument('--few_shot', type=int, default=-1, help='number of few-shot training samples')
     args = parser.parse_args()
 
     if not os.path.exists(args.config_file):
@@ -243,7 +252,7 @@ def main():
 
     os.makedirs(args.save_path, exist_ok=True)
 
-    dataset = DepthFinetuneDataset(args.dataset_root, transform=get_transform(), split_ratio=0.8, subset='train')
+    dataset = DepthFinetuneDataset(args.dataset_root, transform=get_transform(), split_ratio=0.8, subset='train', few_shot=args.few_shot)
     sampler = DistributedSampler(dataset, num_replicas=world_size, rank=rank, shuffle=True)
 
     dataset_test = DepthFinetuneDataset(args.dataset_root, transform=get_transform(), split_ratio=0.8, subset='test')
