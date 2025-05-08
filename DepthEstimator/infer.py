@@ -304,6 +304,6 @@ if __name__ == '__main__':
     elif args.task == 'demo':
         visualize_kitti_predictions(cfg_new, model, indices=indices, output_dir=args.result_dir)
     elif args.task == 'batch':
-        batch_infer_directory(args.root_dir, model, training_hw=cfg['img_hw'], min_depth=args.min_depth, max_depth=args.max_depth)
+        batch_infer_directory(args.root_dir, model, training_hw=cfg['img_hw'], min_depth=args.min_depth, max_depth=args.max_depth, nutrition=args.nutrition)
     else:
         raise ValueError('Invalid task. Please use single, demo, or dict.')
