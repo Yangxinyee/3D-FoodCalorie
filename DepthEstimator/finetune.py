@@ -149,7 +149,7 @@ def finetune_one_epoch(model, data_loader, optimizer, device, epoch, max_depth=1
 
     return epoch_loss / len(data_loader)
 
-def evaluate_on_dataset(model, data_loader, device, min_depth=1e-3, max_depth=12):
+def evaluate_on_dataset(model, data_loader, device, min_depth=1e-6, max_depth=12):
     model.eval()
     pred_depths, gt_depths = [], []
 
@@ -159,7 +159,10 @@ def evaluate_on_dataset(model, data_loader, device, min_depth=1e-3, max_depth=12
             gt_depth = gt_depth.squeeze(1).cpu().numpy()  # [B, H, W]
 
             pred_disp = model.infer_depth(rgb) 
-            pred_depth = model.disp2depth(pred_disp)       
+            min_disp = 1.0 / max_depth
+            max_disp = 1.0 / min_depth
+            scaled_disp = min_disp + (max_disp - min_disp) * pred_disp
+            pred_depth = 1.0 / scaled_disp    
 
             # pred_depth = 1.0 / (pred_disp + 1e-6)
             # pred_depth = torch.clamp(pred_depth, min=min_depth, max=max_depth)
