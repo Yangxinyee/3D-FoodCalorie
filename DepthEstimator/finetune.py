@@ -150,11 +150,15 @@ def evaluate_on_dataset(model, data_loader, device, min_depth=1e-3, max_depth=1.
         for rgb, gt_depth in data_loader:
             rgb = rgb.to(device)
             gt_depth = gt_depth.squeeze(1).cpu().numpy()  # [B, H, W]
+            print(f"gt_depth: {torch.min(gt_depth)}, {torch.max(gt_depth)}")
+            print(f"gt_depth_ratio: {torch.max(gt_depth) / torch.min(gt_depth)}")
 
             pred_disp = model.infer_depth(rgb)        
             pred_depth = 1.0 / (pred_disp + 1e-6)
             pred_depth = torch.clamp(pred_depth, min=min_depth, max=max_depth)
             pred_depth = pred_depth.squeeze(1).cpu().numpy()
+            print(f"pred_depth: {torch.min(pred_depth)}, {torch.max(pred_depth)}")
+            print(f"pred_depth_ratio: {torch.max(pred_depth) / torch.min(pred_depth)}")
 
             gt_depths.extend(gt_depth)
             pred_depths.extend(pred_depth)
