@@ -133,6 +133,10 @@ def finetune_one_epoch(model, data_loader, optimizer, device, epoch, max_depth=1
 
         loss = silog_loss(pred_depth, gt_depth, mask)
         loss.backward()
+        for name, param in model.named_parameters():
+            if param.grad is not None and param.requires_grad:
+                print(f"[Grad] {name}: {param.grad.abs().mean().item():.6f}")
+                
         optimizer.step()
 
         epoch_loss += loss.item()
@@ -151,9 +155,7 @@ def evaluate_on_dataset(model, data_loader, device, min_depth=1e-3, max_depth=12
             rgb = rgb.to(device)
             gt_depth = gt_depth.squeeze(1).cpu().numpy()  # [B, H, W]
 
-            pred_disp = model.infer_depth(rgb)  
-            disp_min, disp_max = pred_disp.min().item(), pred_disp.max().item()
-            print(f"[DEBUG] disp range: {disp_min:.6f} - {disp_max:.6f}")      
+            pred_disp = model.infer_depth(rgb)        
 
             pred_depth = 1.0 / (pred_disp + 1e-6)
             pred_depth = torch.clamp(pred_depth, min=min_depth, max=max_depth)
@@ -243,10 +245,6 @@ def main():
                 param.requires_grad = False
         else:
             raise ValueError(f"Invalid encoder_decoder value: {args.encoder_decoder}")
-    
-    for name, param in model.named_parameters():
-        if param.requires_grad:
-            print(f"[Trainable] {name}")
             
     optimizer = torch.optim.AdamW(
         [p for p in model.parameters() if p.requires_grad],
