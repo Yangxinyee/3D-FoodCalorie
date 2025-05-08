@@ -9,12 +9,28 @@ import torch.nn.functional as F
 import torchvision.transforms as T
 from PIL import Image
 from tqdm import tqdm
+from collections import OrderedDict
 from core.dataset import KITTI_2015
 from core.networks.model_depth_pose import Model_depth_pose
 from core.networks.structures.net_utils import warp_flow
 from core.visualize.visualizer import Visualizer_debug
 from core.evaluation.flowlib import flow_to_image
-from finetune import load_model
+
+def load_model(path, model):
+    data = torch.load(path)
+    state_dict = data['model']
+    new_state_dict = OrderedDict()
+    for k, v in state_dict.items():
+        if k.startswith('module.'):
+            new_state_dict[k[7:]] = v
+        else:
+            new_state_dict[k] = v
+    state_dict = new_state_dict
+    try:
+        model.load_state_dict(state_dict)
+    except RuntimeError as e:
+        raise RuntimeError(f"Failed to load weights: {e}")
+    return model
 
 def disp2depth(disp, min_depth=0.01, max_depth=100.0):
     min_disp = 1 / max_depth
