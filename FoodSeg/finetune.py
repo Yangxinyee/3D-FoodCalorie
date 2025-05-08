@@ -236,14 +236,13 @@ def main():
     # Optimizer & LR Scheduler
     # optimizer = torch.optim.SGD([p for p in model.parameters() if p.requires_grad],
     #                             lr=0.005, momentum=0.9, weight_decay=0.0005)
-    # lr_scheduler = torch.optim.lr_scheduler.StepLR(optimizer, step_size=5, gamma=0.1)
-    # Optimizer & LR Scheduler
     optimizer = torch.optim.Adam(
         [p for p in model.parameters() if p.requires_grad],
         lr=0.005,
         weight_decay=1e-5
     )
-    lr_scheduler = torch.optim.lr_scheduler.ReduceLROnPlateau(optimizer, mode='min', factor=0.5, patience=3)
+    lr_scheduler = torch.optim.lr_scheduler.StepLR(optimizer, step_size=5, gamma=0.1)
+    # lr_scheduler = torch.optim.lr_scheduler.ReduceLROnPlateau(optimizer, mode='min', factor=0.5, patience=3)
     
     # Checkpoint
     last_path = os.path.join(args.save_path, "last.pth")
