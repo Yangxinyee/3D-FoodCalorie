@@ -82,6 +82,43 @@ def infer_single_image(img_path, model, training_hw, min_depth, max_depth, save_
     visualizer.save_disp_color_img(disp_resized, name='colorized_depth_pred')
     print(f'Depth prediction saved in {save_dir}, using fx={fx:.2f}')
 
+def visualize_depth(depth_map_meters, min_depth=1e-3, max_depth=1.2, save_path='depth_color_pred.png'):
+    """
+    depth_map_meters: np.ndarray [H, W], float32, in meters
+    """
+    depth_clipped = np.clip(depth_map_meters, min_depth, max_depth)
+
+    depth_normalized = (depth_clipped - min_depth) / (max_depth - min_depth)
+    depth_normalized = (depth_normalized * 255).astype(np.uint8)
+
+    depth_colored = cv2.applyColorMap(depth_normalized, cv2.COLORMAP_JET)
+
+    # Save image
+    cv2.imwrite(save_path, depth_colored)
+
+def infer_nutrition5k(img_path, model, training_hw, min_depth=1e-3, max_depth=1.2, save_dir='./', fov=60):
+    img = cv2.imread(img_path)
+    h, w = img.shape[0:2]
+
+    img_resized = cv2.resize(img, (training_hw[1], training_hw[0]), interpolation=cv2.INTER_LINEAR)
+    img_t = torch.from_numpy(np.transpose(img_resized, [2,0,1])).float() / 255.0
+    img_t = T.Normalize(mean=[0.485, 0.456, 0.406],
+                        std=[0.229, 0.224, 0.225])(img_t)
+    img_t = img_t.unsqueeze(0).cuda()
+
+    with torch.no_grad():
+        disp = model.infer_depth(img_t)
+    pred_depth = 1.0 / (disp + 1e-6)
+    pred_depth = torch.clamp(pred_depth, min=min_depth, max=max_depth)
+    pred_depth = pred_depth.squeeze(1).cpu().numpy()
+
+    pred_depth_resized = cv2.resize(pred_depth, (w, h), interpolation=cv2.INTER_NEAREST)
+    depth_mm = np.clip(pred_depth_resized * 10000, 0, 65535).astype(np.uint16)
+    cv2.imwrite(os.path.join(save_dir, 'depth_raw_pred.png'), depth_mm)
+
+    visualize_depth(pred_depth_resized, min_depth, max_depth, os.path.join(save_dir, 'depth_color_pred.png'))
+
+
 def sliding_window_inference(image_path, model, input_size=(256, 832), orig_size=(480, 640), stride_ratio=0.5, save_patches=False, patch_save_dir="model_inputs", save_dir="model_outputs"):
     """
     Args:
@@ -168,7 +205,7 @@ def batch_infer_directory(root_dir, model, training_hw, min_depth, max_depth, sl
             if sliding_window:
                 sliding_window_inference(rgb_path, model, training_hw, save_dir=subdir)
             else:
-                infer_single_image(rgb_path, model, training_hw, min_depth, max_depth, save_dir=subdir)
+                infer_nutrition5k(rgb_path, model, training_hw, min_depth, max_depth, save_dir=subdir)
         else:
             print(f"Skipping {subdir}: rgb.png not found.")
 

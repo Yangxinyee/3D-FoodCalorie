@@ -20,7 +20,7 @@ python infer.py \
   --config_file /home/3D-FoodCalorie/DepthEstimator/config/nyu.yaml \
   --gpu 0 \
   --task batch \
-  --pretrained_model /home/checkpoints/Nutrition5K_depth/depth_epoch_3.pth \
+  --pretrained_model /home/checkpoints/Nutrition5K_depth/last.pth \
   --min_depth 0.01 \
   --max_depth 1.2 \
   --root_dir /home/tests | tee infer_demo.log
