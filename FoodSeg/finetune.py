@@ -1,7 +1,9 @@
 import os
+import sys
 import numpy as np
 import argparse
 import torch
+import torchvision
 import torch.distributed as dist
 from PIL import Image
 from torch.utils.data import DataLoader
@@ -93,9 +95,14 @@ class FoodSeg103Dataset(torch.utils.data.Dataset):
         return len(self.imgs)
 
 def get_transform():
-    transforms = []
-    transforms.append(T.ToTensor())
-    return T.Compose(transforms)
+    # return T.Compose([
+    #     T.ToTensor(),
+    #     T.Normalize(mean=[0.485, 0.456, 0.406],
+    #                 std=[0.229, 0.224, 0.225])
+    # ])
+    return T.Compose([
+        T.ToTensor()
+    ])
 
 def get_model_instance_segmentation(num_classes):
     model = maskrcnn_resnet50_fpn(weights="DEFAULT")
@@ -232,8 +239,14 @@ def main():
     # Optimizer & LR Scheduler
     optimizer = torch.optim.SGD([p for p in model.parameters() if p.requires_grad],
                                 lr=0.005, momentum=0.9, weight_decay=0.0005)
+    # optimizer = torch.optim.Adam(
+    #     [p for p in model.parameters() if p.requires_grad],
+    #     lr=0.005,
+    #     weight_decay=1e-5
+    # )
     lr_scheduler = torch.optim.lr_scheduler.StepLR(optimizer, step_size=5, gamma=0.1)
-
+    # lr_scheduler = torch.optim.lr_scheduler.ReduceLROnPlateau(optimizer, mode='min', factor=0.5, patience=3)
+    
     # Checkpoint
     last_path = os.path.join(args.save_path, "last.pth")
     start_epoch = 0
@@ -249,7 +262,7 @@ def main():
 
     if rank == 0 and not args.resume:
         with open(log_file_path, "w") as f:
-            f.write("Epoch,Mean_IoU,mAP@0.5,mAP@0.75\n")
+            f.write("Epoch,Mean_IoU,IoU_Threshold,AP\n")
 
     # Train loop
     for epoch in range(start_epoch, args.num_epochs):
@@ -285,8 +298,14 @@ def main():
             print(f"[Epoch {epoch+1}] Loss: {epoch_loss:.4f}")
             mean_aps, mean_iou = evaluate(model.module, data_loader_test, device)
 
+            # Log in the requested format
+            formatted_metrics = f"[Epoch: {epoch+1}] - Mean IoU: {mean_iou:.4f}" + "".join(
+                [f" - mAP@{int(iou_thresh*100):.2f}: {ap:.4f}" for iou_thresh, ap in mean_aps.items()]
+            )
+            print(formatted_metrics)
+
             with open(log_file_path, "a") as f:
-                f.write(f"{epoch},{mean_iou:.4f},{mean_aps[0.5]:.2f},{mean_aps[0.75]:.4f}\n")
+                f.write(formatted_metrics + "\n")
 
             save_dict = {
                 'epoch': epoch,

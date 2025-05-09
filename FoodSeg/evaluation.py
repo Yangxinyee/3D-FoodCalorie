@@ -10,8 +10,6 @@ from torchvision.models.detection.mask_rcnn import MaskRCNNPredictor
 import torchvision.transforms as T
 from tqdm import tqdm
 
-CHECKPOINT_PATH = "mrcnn_foodseg103.pth"
-
 class FoodSeg103Dataset(torch.utils.data.Dataset):
     def __init__(self, root, subset="train", transforms=None):
         self.root = root
@@ -95,14 +93,22 @@ def get_transform():
     transforms.append(T.ToTensor())
     return T.Compose(transforms)
 
-def get_model_instance_segmentation(num_classes):
-    model = maskrcnn_resnet50_fpn(weights="DEFAULT")
+def get_model_instance_segmentation(num_classes, checkpoint_path=None):
+    model = maskrcnn_resnet50_fpn(weights=None)
     in_features = model.roi_heads.box_predictor.cls_score.in_features
     model.roi_heads.box_predictor = FastRCNNPredictor(in_features, num_classes)
 
     in_features_mask = model.roi_heads.mask_predictor.conv5_mask.in_channels
     hidden_layer = 512
     model.roi_heads.mask_predictor = MaskRCNNPredictor(in_features_mask, hidden_layer, num_classes)
+
+    if checkpoint_path is not None and os.path.isfile(checkpoint_path):
+        print(f"[INFO] Loading checkpoint from {checkpoint_path}")
+        data = torch.load(checkpoint_path, map_location="cpu")
+        print("model data keys:", data.keys())
+        model.load_state_dict(data['model'])
+    else:
+        print("[WARN] Checkpoint not found, using randomly initialized model.")
 
     return model
 
@@ -190,21 +196,21 @@ def evaluate(model, data_loader, device, iou_thresholds=[0.5, 0.75]):
     return mean_aps, mean_ious
 
 def main():
-    dataset_root = "../FoodSeg103"
+    dataset_root = "/home/dataset/FoodSeg103"
     num_classes = 104  # 103 classes + background
+    checkpoint_path = "/home/checkpoints/MaskRCNN/mrcnn_foodseg103_14.pth"
+
     device = torch.device('cuda') if torch.cuda.is_available() else torch.device('cpu')
     print(f"[INFO] Using device: {device}")
 
-    # dataset = FoodSeg103Dataset(dataset_root, subset="train", transforms=get_transform())
     dataset_test = FoodSeg103Dataset(dataset_root, subset="test", transforms=get_transform())
-
-    # data_loader = DataLoader(dataset, batch_size=8, shuffle=True, num_workers=4, collate_fn=collate_fn)
     data_loader_test = DataLoader(dataset_test, batch_size=8, shuffle=False, num_workers=4, collate_fn=collate_fn)
 
-    print("[INFO] DataLoader_test created: ", len(data_loader_test))
+    print(f"[INFO] Loaded {len(dataset_test)} test samples.")
 
-    model = get_model_instance_segmentation(num_classes)
+    model = get_model_instance_segmentation(num_classes, checkpoint_path=checkpoint_path)
     model.to(device)
+    model.eval()  # <- Ensure model is in eval mode
 
     mean_aps, mean_iou = evaluate(model, data_loader_test, device)
     print(f"[INFO] Evaluation Results:")
