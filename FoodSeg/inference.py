@@ -90,7 +90,7 @@ def process_directory(input_dir, output_dir, model_path, category_path):
     for dish_folder in os.listdir(input_dir):
         dish_path = os.path.join(input_dir, dish_folder)
         rgb_path = os.path.join(dish_path, "rgb.png")
-
+        
         if not os.path.isfile(rgb_path):
             print(f"[WARN] rgb.png not found in {dish_path}")
             continue
@@ -107,10 +107,22 @@ def process_directory(input_dir, output_dir, model_path, category_path):
         masks = output["masks"].squeeze(1).cpu().numpy() > 0.5
         labels = output["labels"].cpu().numpy()
 
+        ### Draw food w/ masks+labels ###
         # result = draw_instance_predictions(orig.copy(), masks, labels, class_names)
         # output_path = os.path.join(output_dir, f"{dish_folder}_mask.png")
-        result = draw_food_only_image(orig.copy(), masks)
-        output_path = os.path.join(output_dir, f"{dish_folder}_masked.png")
+
+        ### Masked Food only ###
+        # result = draw_food_only_image(orig.copy(), masks)
+        # output_path = os.path.join(output_dir, f"{dish_folder}_masked.png")
+        
+        ### Masked Depth only ###
+        depth_path = os.path.join(dish_path, "depth_color_pred.png")
+        if not os.path.isfile(depth_path):
+            print(f"[WARN] depth_color_pred.png not found in {dish_path}")
+            continue
+        depth = cv2.imread(depth_path, cv2.IMREAD_UNCHANGED)
+        result = draw_food_only_image(depth.copy(), masks)
+        output_path = os.path.join(output_dir, f"{dish_folder}_depth_masked.png")
         cv2.imwrite(output_path, cv2.cvtColor(result, cv2.COLOR_RGB2BGR))
         print(f"[INFO] Saved mask to {output_path}")
         
