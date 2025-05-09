@@ -95,14 +95,14 @@ class FoodSeg103Dataset(torch.utils.data.Dataset):
         return len(self.imgs)
 
 def get_transform():
-    return T.Compose([
-        T.ToTensor(),
-        T.Normalize(mean=[0.485, 0.456, 0.406],
-                    std=[0.229, 0.224, 0.225])
-    ])
     # return T.Compose([
-    #     T.ToTensor()
+    #     T.ToTensor(),
+    #     T.Normalize(mean=[0.485, 0.456, 0.406],
+    #                 std=[0.229, 0.224, 0.225])
     # ])
+    return T.Compose([
+        T.ToTensor()
+    ])
 
 def get_model_instance_segmentation(num_classes):
     model = maskrcnn_resnet50_fpn(weights="DEFAULT")

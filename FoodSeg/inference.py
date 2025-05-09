@@ -113,8 +113,7 @@ def process_directory(input_dir, output_dir, model_path, category_path):
         output_path = os.path.join(output_dir, f"{dish_folder}_masked.png")
         cv2.imwrite(output_path, cv2.cvtColor(result, cv2.COLOR_RGB2BGR))
         print(f"[INFO] Saved mask to {output_path}")
-        break
-
+        
 if __name__ == "__main__":
     args = parse_args()
     process_directory(args.input_dir, args.output_dir, args.model_path, args.category_path)
