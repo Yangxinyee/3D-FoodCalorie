@@ -67,6 +67,20 @@ def draw_instance_predictions(img, masks, labels, class_names, score_thresh=0.5)
 
     return img.astype(np.uint8)
 
+def draw_food_only_image(img, masks, score_thresh=0.5):
+    if len(masks) == 0:
+        return np.zeros_like(img)
+
+    # Combine all masks above the threshold
+    combined_mask = np.zeros(masks[0].shape, dtype=bool)
+    for mask in masks:
+        combined_mask |= mask
+
+    # Apply mask: keep only food regions, black out background
+    masked_img = np.zeros_like(img)
+    masked_img[combined_mask] = img[combined_mask]
+    return masked_img
+
 # -------- MAIN FUNCTION --------
 def process_directory(input_dir, output_dir, model_path, category_path):
     model = get_model(model_path)
@@ -93,11 +107,13 @@ def process_directory(input_dir, output_dir, model_path, category_path):
         masks = output["masks"].squeeze(1).cpu().numpy() > 0.5
         labels = output["labels"].cpu().numpy()
 
-        result = draw_instance_predictions(orig.copy(), masks, labels, class_names)
-
-        output_path = os.path.join(output_dir, f"{dish_folder}_mask.png")
+        # result = draw_instance_predictions(orig.copy(), masks, labels, class_names)
+        # output_path = os.path.join(output_dir, f"{dish_folder}_mask.png")
+        result = draw_food_only_image(orig.copy(), masks)
+        output_path = os.path.join(output_dir, f"{dish_folder}_masked.png")
         cv2.imwrite(output_path, cv2.cvtColor(result, cv2.COLOR_RGB2BGR))
         print(f"[INFO] Saved mask to {output_path}")
+        break
 
 if __name__ == "__main__":
     args = parse_args()
