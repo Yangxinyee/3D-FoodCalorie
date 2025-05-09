@@ -31,8 +31,8 @@ def get_model(model_path):
     in_features_mask = model.roi_heads.mask_predictor.conv5_mask.in_channels
     hidden_layer = 512
     model.roi_heads.mask_predictor = MaskRCNNPredictor(in_features_mask, hidden_layer, NUM_CLASSES)
-
-    model.load_state_dict(torch.load(model_path, map_location=DEVICE))
+    data = torch.load(model_path, map_location=DEVICE)
+    model.load_state_dict(data['model'])
     model.to(DEVICE)
     model.eval()
     return model

@@ -16,7 +16,7 @@ cd /home/3D-FoodCalorie/FoodSeg
 
 # Run inference
 python inference.py \
-  --model_path /home/checkpoints/mrcnn_foodseg_14.pth \
+  --model_path /home/mrcnn_foodseg103_best.pth \
   --input_dir /home/dataset/nutrition5k_dataset/imagery/realsense_overhead \
   --output_dir /home/dataset/nutrition5k_dataset/imagery/mrcnn_output \
   --category_path /home/dataset/FoodSeg103/category_id.txt
