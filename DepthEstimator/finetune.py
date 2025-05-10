@@ -330,7 +330,7 @@ def main():
         if rank == 0:
             print(f"[Epoch {epoch+1}] Average Training Loss: {epoch_loss:.4f}")
 
-            eval_metrics = evaluate_on_dataset(model.module, data_loader_test, device)
+            eval_metrics = evaluate_on_dataset(model.module, data_loader_test, device, min_depth=0.03, max_depth=1.2, nyu=True)
             abs_rel, sq_rel, rms, log_rms, a1, a2, a3 = eval_metrics
             with open(log_path, 'a') as f:
                 f.write(f"{epoch+1},{abs_rel:.4f},{sq_rel:.4f},{rms:.4f},{log_rms:.4f},{a1:.4f},{a2:.4f},{a3:.4f}\n")
