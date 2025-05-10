@@ -210,7 +210,7 @@ def evaluate_on_dataset(model, data_loader, device, min_depth=0.03, max_depth=1.
 
             gt_depths.extend(gt_depth)
             pred_depths.extend(pred_depth)
-    return eval_depth(gt_depths, pred_depths, min_depth=min_depth, max_depth=max_depth, nyu=False)
+    return eval_depth(gt_depths, pred_depths, min_depth=min_depth, max_depth=max_depth, nyu=True)
 
 def main():
     parser = argparse.ArgumentParser()
@@ -330,7 +330,7 @@ def main():
         if rank == 0:
             print(f"[Epoch {epoch+1}] Average Training Loss: {epoch_loss:.4f}")
 
-            eval_metrics = evaluate_on_dataset(model.module, data_loader_test, device, min_depth=0.03, max_depth=1.2, nyu=True)
+            eval_metrics = evaluate_on_dataset(model.module, data_loader_test, device)
             abs_rel, sq_rel, rms, log_rms, a1, a2, a3 = eval_metrics
             with open(log_path, 'a') as f:
                 f.write(f"{epoch+1},{abs_rel:.4f},{sq_rel:.4f},{rms:.4f},{log_rms:.4f},{a1:.4f},{a2:.4f},{a3:.4f}\n")
