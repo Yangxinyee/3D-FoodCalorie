@@ -198,10 +198,11 @@ def evaluate_on_dataset(model, data_loader, device, min_depth=0.03, max_depth=1.
             gt_depth = gt_depth.squeeze(1).cpu().numpy()  # [B, H, W]
 
             pred_disp = model.infer_depth(rgb) 
-            min_disp = 1.0 / max_depth
-            max_disp = 1.0 / min_depth
-            scaled_disp = min_disp + (max_disp - min_disp) * pred_disp
-            pred_depth = 1.0 / scaled_disp    
+            # min_disp = 1.0 / max_depth
+            # max_disp = 1.0 / min_depth
+            # scaled_disp = min_disp + (max_disp - min_disp) * pred_disp
+            # pred_depth = 1.0 / scaled_disp    
+            _, pred_depth = model.disp2depth(pred_disp, min_depth=min_depth, max_depth=max_depth)
 
             # pred_depth = 1.0 / (pred_disp + 1e-6)
             # pred_depth = torch.clamp(pred_depth, min=min_depth, max=max_depth)
