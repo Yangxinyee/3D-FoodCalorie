@@ -27,8 +27,7 @@ def eval_depth(gt_depths,
     for i in range(num_samples):
         gt_depth = gt_depths[i]
         pred_depth = pred_depths[i]
-        print(np.max(gt_depth), np.min(gt_depth))
-        print(np.max(pred_depth), np.min(pred_depth))
+        print(gt_depth.shape, pred_depth.shape)
         mask = np.logical_and(gt_depth > min_depth, gt_depth < max_depth)
         
         if not nyu:
