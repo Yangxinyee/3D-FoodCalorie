@@ -8,7 +8,6 @@ This repository implements a novel three-stage pipeline for estimating nutrition
 - **Backbone**: [Mask R-CNN](https://arxiv.org/abs/1703.06870) (ResNet-50 + FPN)
 - **Dataset**: [FoodSeg103](https://xiongweiwu.github.io/foodseg103.html)
 - **Purpose**: Isolate food items from the background to provide object-level granularity.
-- **Fine-tuning**: Achieved superior mIoU and mAP compared to COCO-pretrained models.
 
 ### 2. Self-Supervised Monocular Depth Estimation
 - **Architecture**: PWCNet-based optical flow + lightweight DepthNet
@@ -19,8 +18,7 @@ This repository implements a novel three-stage pipeline for estimating nutrition
 
 ### 3. RGB-D Fusion & Nutrition Estimation
 - **Fusion Backbone**: Dual ResNet-101 + Feature Pyramid Network + CBAM + Non-local attention
-- **Task**: Multi-task regression for nutritional values
+- **Purpose**: Predict five types of nutritional values (calories, mass, fat, carbohydrate, protein) from RGB and depth images.
 - **Output**: Calories, Mass, Fat, Carbs, Protein
----
 
 ## 📊 Results
