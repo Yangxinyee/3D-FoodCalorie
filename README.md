@@ -4,6 +4,7 @@
 This repository implements a novel three-stage pipeline for estimating nutritional values—such as calorie, mass, fat, carbs, and protein—from a single RGB food image. By integrating semantic segmentation, monocular depth estimation, and RGB-D feature fusion, the system provides geometry-aware calorie predictions that are both scalable and practical for real-world dietary applications.
 
 ***Our Technical Report is [here](assets/G2_3DFoodCalorie.pdf)!👻***
+
 ![demo](assets/demo.jpg)
 
 ## 🚀 Pipeline Overview
