@@ -13,8 +13,7 @@ This repository implements a novel three-stage pipeline for estimating nutrition
 ### 2. Self-Supervised Monocular Depth Estimation
 - **Architecture**: PWCNet-based optical flow + lightweight DepthNet
 - **Supervision**: Scale-aligned triangulation from dense optical flow
-- **Loss**: Weighted combination of reprojection, flow, scale, and smoothness losses
-- **Datasets**: Pretrained on NYUv2, fine-tuned on Nutrition5K
+- **Datasets**: Pretrained on NYUv2, fine-tuned on [Nutrition5K](https://github.com/google-research-datasets/Nutrition5k)
 - **Output**: Food-specific depth maps, even from monocular input
 
 ### 3. RGB-D Fusion & Nutrition Estimation
@@ -23,3 +22,10 @@ This repository implements a novel three-stage pipeline for estimating nutrition
 - **Output**: Calories, Mass, Fat, Carbs, Protein
 
 ## 📊 Results
+
+## 💐 Our Contributions
+1. Wefine-tunedaMaskR-CNNmodelontheFoodSeg103 dataset to improve food segmentation performance.
+2. We propose a novel depth estimation approach by in- tegrating optical flow pathways with depth prediction, trained in a self-supervised manner.
+3. Wesystematicallyintegratedsegmentationanddepthes- timation outputs into the nutrition prediction pipeline, enabling fast and accurate inference from a single RGB image.
+4. We constructed a new training set using our predicted depth maps and refined segmentation masks on the Nu- trition5k dataset, which significantly improved nutrition estimation in real-world scenarios.
+5. We developed a lightweight system demo to support practical use and showcase the full pipeline.
