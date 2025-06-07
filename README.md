@@ -19,7 +19,9 @@ This repository implements a novel three-stage pipeline for estimating nutrition
 - **Supervision**: Scale-aligned triangulation from dense optical flow
 - **Datasets**: Pretrained on NYUv2, fine-tuned on [Nutrition5K](https://github.com/google-research-datasets/Nutrition5k)
 - **Output**: Food-specific depth maps, even from monocular input
-
+![depth_res1](assets/depth_res1.jpg)
+![depth_res2](assets/depth_res2.jpg)
+![depth_res3](assets/depth_res3.jpg)
 
 ### 3. RGB-D Fusion & Nutrition Estimation
 - **Fusion Backbone**: Dual ResNet-101 + Feature Pyramid Network + CBAM + Non-local attention 
